@@ -6,16 +6,41 @@
 *Abstract*
 This guide documents the process for a minimal installation of NixOS on a Proxmox virtual machine. It leverages the =nixos-anywhere= tool for remote deployment and =disko= for declarative disk partitioning. It also covers the essential post-installation steps for integrating the new host with =sops-nix= for secrets management.
 
+* TL;DR: Quick Install Guide
+1. *Prepare VM:* Boot the target Proxmox VM from a NixOS ISO and set a root password:
+   #+begin_src sh
+   passwd
+   #+end_src
+
+2. *Deploy NixOS:* From your workstation, run =nixos-anywhere=, pointing to your flake and the VM's IP address.
+   #+begin_src sh
+   nix run github:nix-community/nixos-anywhere -- \
+     --flake .#your-machine-name \
+     --target-host root@<vm-ip-address>
+   #+end_src
+
+3. *Get Host Key:* After installation, SSH into the new VM and get its host AGE key.
+   #+begin_src sh
+   ssh root@<vm-ip-address>
+   nix-shell -p ssh-to-age --run 'cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age'
+   #+end_src
+
+4. *Update Secrets:* On your workstation, add the new AGE key to =.sops.yaml= and re-encrypt secrets.
+   #+begin_src sh
+   sops updatekeys secrets/secrets.yaml
+   #+end_src
+
 * Table of Contents                                                            :TOC:
+- [[#tldr-quick-install-guide][TL;DR: Quick Install Guide]]
 - [[#prerequisites-on-the-target-vm][Prerequisites on the Target VM]]
 - [[#installation-process][Installation Process]]
   - [[#deploying-nixos][Deploying NixOS]]
-  - [[#note-on-hardware-configuration][Note on Hardware Configuration]]
-- [[#key-configuration-details][Key Configuration Details]]
-  - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
 - [[#post-installation-secrets-management][Post-Installation: Secrets Management]]
   - [[#step-1-generating-the-host-age-key][Step 1: Generating the Host AGE Key]]
   - [[#step-2-updating-sops-and-re-encrypting-secrets][Step 2: Updating SOPS and Re-encrypting Secrets]]
+- [[#notes-and-configuration-details][Notes and Configuration Details]]
+  - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
+  - [[#generating-hardware-configuration][Generating Hardware Configuration]]
 - [[#todos][TODOs]]
 
 * Prerequisites on the Target VM
@@ -42,51 +67,6 @@ nix run github:nix-community/nixos-anywhere -- \
   --flake .#susano-minimal \
   --target-host root@192.168.1.85
 #+end_src
-
-** Note on Hardware Configuration
-While not used in the command above, =nixos-anywhere= can automatically generate a hardware configuration file from the target machine. This is useful for capturing machine-specific settings.
-
-To do this, include the =--generate-hardware-config= flag in your command. The following example shows how to generate the file and save it as =./hardware-configuration.nix= in your local flake directory.
-
-#+begin_src sh
-nix run github:nix-community/nixos-anywhere -- \
-  --flake .#your-flake-output \
-  --target-host root@192.168.1.85 \
-  --generate-hardware-config ./hardware-configuration.nix
-#+end_src
-
-* Key Configuration Details
-** Disko Configuration for Proxmox (MBR Boot)
-A critical requirement for ensuring a NixOS VM can boot correctly in Proxmox is the disk partition scheme. Proxmox expects a Master Boot Record (MBR) compatible setup.
-
-When using =disko= for declarative disk management, you must configure it to create a GPT partition table that includes a special 1M BIOS boot partition (type =EF02=). This partition is specifically used by GRUB for MBR compatibility.
-
-Here is an example snippet for the =disko= configuration:
-
-#+begin_src nix
-{
-  disko.devices = {
-    disk = {
-      main = {
-        device = "/dev/sda";
-        type = "disk";
-        content = {
-          type = "gpt";
-          partitions = {
-            boot = {
-              size = "1M";
-              type = "EF02"; # for grub MBR
-            };
-            # ... your other partitions like root, swap, etc.
-          };
-        };
-      };
-    };
-  };
-}
-#+end_src
-
-For a complete example, you can refer to the official =disko= repository: [[https://github.com/nix-community/disko/blob/master/example/gpt-bios-compat.nix][gpt-bios-compat.nix]].
 
 * Post-Installation: Secrets Management
 ** Step 1: Generating the Host AGE Key
@@ -127,6 +107,51 @@ The new AGE key must be added to your =.sops.yaml= configuration file. This allo
    sops updatekeys secrets/secrets.yaml
    #+end_src
    Your secrets are now encrypted for both the primary key and the new host's key.
+
+* Notes and Configuration Details
+** Disko Configuration for Proxmox (MBR Boot)
+A critical requirement for ensuring a NixOS VM can boot correctly in Proxmox is the disk partition scheme. Proxmox expects a Master Boot Record (MBR) compatible setup.
+
+When using =disko= for declarative disk management, you must configure it to create a GPT partition table that includes a special 1M BIOS boot partition (type =EF02=). This partition is specifically used by GRUB for MBR compatibility.
+
+Here is an example snippet for the =disko= configuration:
+
+#+begin_src nix
+{
+  disko.devices = {
+    disk = {
+      main = {
+        device = "/dev/sda";
+        type = "disk";
+        content = {
+          type = "gpt";
+          partitions = {
+            boot = {
+              size = "1M";
+              type = "EF02"; # for grub MBR
+            };
+            # ... your other partitions like root, swap, etc.
+          };
+        };
+      };
+    };
+  };
+}
+#+end_src
+
+For a complete example, you can refer to the official =disko= repository: [[https://github.com/nix-community/disko/blob/master/example/gpt-bios-compat.nix][gpt-bios-compat.nix]].
+
+** Generating Hardware Configuration
+The =nixos-anywhere= tool can automatically generate a hardware configuration file from the target machine. This is useful for capturing machine-specific settings.
+
+To do this, include the =--generate-hardware-config= flag in your command. The following example shows how to generate the file and save it as =./hardware-configuration.nix= in your local flake directory.
+
+#+begin_src sh
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#your-flake-output \
+  --target-host root@192.168.1.85 \
+  --generate-hardware-config ./hardware-configuration.nix
+#+end_src
 
 * TODOs
 - [ ] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable across different hardware setups.
