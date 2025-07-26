@@ -9,6 +9,10 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    home-manager = {
+      url = "github:nix-community/home-manager/release-25.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -16,15 +20,20 @@
     nixpkgs,
     nixos-hardware,
     disko,
+    home-manager,
     ...
   } @ inputs: let
     inherit (self) outputs;
+    extraHomeModules = [
+      ./hm-modules
+    ];
   in {
     nixosConfigurations = {
       susano-minimal = nixpkgs.lib.nixosSystem {
-        specialArgs = {inherit inputs outputs;};
+        specialArgs = {inherit inputs outputs extraHomeModules; };
         modules = [
           disko.nixosModules.disko
+          home-manager.nixosModules.home-manager
           ./minimal
         ];
       };

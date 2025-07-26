@@ -1,0 +1,89 @@
+#+TITLE: Installing NixOS on a Proxmox VM using nixos-anywhere
+#+AUTHOR:
+#+DATE:
+#+OPTIONS: toc:t num:nil
+
+*Abstract*
+This guide documents the process for a minimal installation of NixOS on a Proxmox virtual machine. It leverages the =nixos-anywhere= tool for remote deployment and =disko= for declarative disk partitioning.
+
+* Table of Contents                                                            :TOC:
+- [[#prerequisites-on-the-target-vm][Prerequisites on the Target VM]]
+- [[#installation-process][Installation Process]]
+  - [[#deploying-nixos][Deploying NixOS]]
+  - [[#note-on-hardware-configuration][Note on Hardware Configuration]]
+- [[#key-configuration-details][Key Configuration Details]]
+  - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
+- [[#todos][TODOs]]
+
+* Prerequisites on the Target VM
+Before attempting to install NixOS with =nixos-anywhere=, you must first perform a critical setup step on the target Proxmox VM.
+
+The minimal NixOS installation ISO does not have a default password for the =root= user. The =nixos-anywhere= command requires SSH access, which necessitates a password.
+
+1. Boot the Proxmox VM using the minimal NixOS installation ISO.
+2. Open a terminal on the VM's console.
+3. Set a password for the =root= user by running the following command:
+   #+begin_src sh
+   passwd
+   #+end_src
+   You will be prompted to enter and confirm a new password.
+
+* Installation Process
+** Deploying NixOS
+With the root password set on the target VM, you can now run =nixos-anywhere= from your local machine to deploy your NixOS configuration.
+
+The following command uses =nix run= to execute =nixos-anywhere=, pointing it to a specific flake output (=.#susano-minimal=) and the IP address of the target VM.
+
+#+begin_src sh
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#susano-minimal \
+  --target-host root@192.168.1.85
+#+end_src
+
+** Note on Hardware Configuration
+While not used in the command above, =nixos-anywhere= can automatically generate a hardware configuration file from the target machine. This is useful for capturing machine-specific settings.
+
+To do this, include the =--generate-hardware-config= flag in your command. The following example shows how to generate the file and save it as =./hardware-configuration.nix= in your local flake directory.
+
+#+begin_src sh
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#your-flake-output \
+  --target-host root@192.168.1.85 \
+  --generate-hardware-config ./hardware-configuration.nix
+#+end_src
+
+* Key Configuration Details
+** Disko Configuration for Proxmox (MBR Boot)
+A critical requirement for ensuring a NixOS VM can boot correctly in Proxmox is the disk partition scheme. Proxmox expects a Master Boot Record (MBR) compatible setup.
+
+When using =disko= for declarative disk management, you must configure it to create a GPT partition table that includes a special 1M BIOS boot partition (type =EF02=). This partition is specifically used by GRUB for MBR compatibility.
+
+Here is an example snippet for the =disko= configuration:
+
+#+begin_src nix
+{
+  disko.devices = {
+    disk = {
+      main = {
+        device = "/dev/sda";
+        type = "disk";
+        content = {
+          type = "gpt";
+          partitions = {
+            boot = {
+              size = "1M";
+              type = "EF02"; # for grub MBR
+            };
+            # ... your other partitions like root, swap, etc.
+          };
+        };
+      };
+    };
+  };
+}
+#+end_src
+
+For a complete example, you can refer to the official =disko= repository: [[https://github.com/nix-community/disko/blob/master/example/gpt-bios-compat.nix][gpt-bios-compat.nix]].
+
+* TODOs
+- [ ] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable across different hardware setups.
