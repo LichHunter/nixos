@@ -51,6 +51,7 @@
           sops-nix.nixosModules.sops
 
           ./main
+          ./modules
         ];
       };
     };

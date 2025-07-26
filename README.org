@@ -4,7 +4,7 @@
 #+OPTIONS: toc:t num:nil
 
 *Abstract*
-This guide documents the process for a minimal installation of NixOS on a Proxmox virtual machine. It leverages the =nixos-anywhere= tool for remote deployment and =disko= for declarative disk partitioning. It also covers the essential post-installation steps for integrating the new host with =sops-nix= for secrets management.
+This guide documents the process for a minimal installation of NixOS on a Proxmox virtual machine. It leverages the =nixos-anywhere= tool for remote deployment and =disko= for declarative disk partitioning. It also covers the essential post-installation steps for integrating the new host with =sops-nix= for secrets management and lists available custom modules.
 
 * TL;DR: Quick Install Guide
 1. *Prepare VM:* Boot the target Proxmox VM from a NixOS ISO and set a root password:
@@ -38,6 +38,8 @@ This guide documents the process for a minimal installation of NixOS on a Proxmo
 - [[#post-installation-secrets-management][Post-Installation: Secrets Management]]
   - [[#step-1-generating-the-host-age-key][Step 1: Generating the Host AGE Key]]
   - [[#step-2-updating-sops-and-re-encrypting-secrets][Step 2: Updating SOPS and Re-encrypting Secrets]]
+- [[#optional-nixos-modules][Optional NixOS Modules]]
+  - [[#reverse-proxies][Reverse Proxies]]
 - [[#notes-and-configuration-details][Notes and Configuration Details]]
   - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
   - [[#generating-hardware-configuration][Generating Hardware Configuration]]
@@ -102,11 +104,49 @@ The new AGE key must be added to your =.sops.yaml= configuration file. This allo
              - *susano
    #+end_src
 
-3. After saving the updated =.sops.yaml= file, run the =updatekeys= command. This re-encrypts the specified secrets file with the new set of keys defined in =.sops.yaml=. For more information, see the [[https://github.com/getsops/sops?tab=readme-ov-file#281updatekeys-command][official documentation]].
+3. After saving the updated =.sops.yaml= file, run the =updatekeys= command. This re-encrypts the specified secrets file with the new set of keys defined in =.sots.yaml=. For more information, see the [[https://github.com/getsops/sops?tab=readme-ov-file#281updatekeys-command][official documentation]].
    #+begin_src sh
    sops updatekeys secrets/secrets.yaml
    #+end_src
    Your secrets are now encrypted for both the primary key and the new host's key.
+
+* Optional NixOS Modules
+** Reverse Proxies
+The following modules can be enabled to provide a reverse proxy.
+
+*Note:* Currently, none of the available reverse proxy modules (NGINX, Traefik, Caddy) are functional. This is a known issue that needs to be investigated.
+
+*** NGINX
+The initial switch to this configuration may be slow as it waits for ACME to issue SSL certificates.
+#+begin_src nix
+dov = {
+  # Reverse Proxy
+  reverse-proxy = {
+    nginx.enable = true;
+  };
+};
+#+end_src
+
+*** Traefik
+This module is currently considered to be in a broken state.
+#+begin_src nix
+dov = {
+  # Reverse Proxy
+  reverse-proxy = {
+    traefik.enable = true;
+  };
+};
+#+end_src
+
+*** Caddy
+#+begin_src nix
+dov = {
+  # Reverse Proxy
+  reverse-proxy = {
+    caddy.enable = true;
+  };
+};
+#+end_src
 
 * Notes and Configuration Details
 ** Disko Configuration for Proxmox (MBR Boot)
@@ -154,5 +194,9 @@ nix run github:nix-community/nixos-anywhere -- \
 #+end_src
 
 * TODOs
-- [ ] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable across different hardware setups.
+- [ ] Investigate and fix the issue preventing any of the reverse proxy modules (NGINX, Traefik, Caddy) from working correctly.
+- [ ] Troubleshoot and fix an issue that occurs when reloading the NixOS configuration remotely, which breaks the SSH pipe and requires entering the root password three times.
 - [ ] Investigate and resolve the issue where updating a user's password declaratively using a secret managed by =sops= failed after the initial installation.
+- [ ] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable.
+- [ ] Create a custom ISO image to streamline the installation process, potentially pre-configuring items like the root user to avoid manual console steps.
+- [ ] Develop an automated installation script to handle the post-install process, such as fetching the AGE key and updating sops, based on [[https://unmovedcentre.com/posts/remote-install-nixos-config/#update-sops-file][this guide]].

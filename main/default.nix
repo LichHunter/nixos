@@ -129,6 +129,24 @@ in {
     };
   };
 
+  ###
+  # My Services
+  ###
+
+  dov = {
+    # Reverse Proxy
+    reverse-proxy = {
+      nginx.enable = false; # TODO does not work for some reason
+      traefik.enable = false; # TODO has issues retrieving certificate from duckdns
+      caddy.enable = false; # TODO has issues retrieving certificate from duckdns
+    };
+
+    virtualisation = {
+      podman.enable = false;
+      docker.enable = true;
+    };
+  };
+
   # DO NOT CHANGE AT ANY POINT!
   system.stateVersion = "25.05";
 }

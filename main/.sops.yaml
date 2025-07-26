@@ -1,6 +1,6 @@
 keys:
   - &primary age19wvqtn4ju6k4vs8fxr34unl6xx4cv04jw0lx9ps20xlde927zfssgl4qke
-  - &susano age1puzhjqxkxxfygm00taqql9vsv26cn2drqr3fk097mnu6t90fn9rqx7vtvs
+  - &susano age1z2982ful2wun2ec3vjn2q22yzmrrk72t7qhlhtkwh8vfnrrfrdpqhc8xs0
 creation_rules:
   - path_regex: secrets/secrets.yaml$
     key_groups:
