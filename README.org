@@ -1,10 +1,10 @@
 #+TITLE: Installing NixOS on a Proxmox VM using nixos-anywhere
-#+AUTHOR:
-#+DATE:
+#+AUTHOR: Alexander Derevianko
+#+DATE: <2025-07-26 Sat>
 #+OPTIONS: toc:t num:nil
 
 *Abstract*
-This guide documents the process for a minimal installation of NixOS on a Proxmox virtual machine. It leverages the =nixos-anywhere= tool for remote deployment and =disko= for declarative disk partitioning.
+This guide documents the process for a minimal installation of NixOS on a Proxmox virtual machine. It leverages the =nixos-anywhere= tool for remote deployment and =disko= for declarative disk partitioning. It also covers the essential post-installation steps for integrating the new host with =sops-nix= for secrets management.
 
 * Table of Contents                                                            :TOC:
 - [[#prerequisites-on-the-target-vm][Prerequisites on the Target VM]]
@@ -13,6 +13,9 @@ This guide documents the process for a minimal installation of NixOS on a Proxmo
   - [[#note-on-hardware-configuration][Note on Hardware Configuration]]
 - [[#key-configuration-details][Key Configuration Details]]
   - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
+- [[#post-installation-secrets-management][Post-Installation: Secrets Management]]
+  - [[#step-1-generating-the-host-age-key][Step 1: Generating the Host AGE Key]]
+  - [[#step-2-updating-sops-and-re-encrypting-secrets][Step 2: Updating SOPS and Re-encrypting Secrets]]
 - [[#todos][TODOs]]
 
 * Prerequisites on the Target VM
@@ -85,5 +88,46 @@ Here is an example snippet for the =disko= configuration:
 
 For a complete example, you can refer to the official =disko= repository: [[https://github.com/nix-community/disko/blob/master/example/gpt-bios-compat.nix][gpt-bios-compat.nix]].
 
+* Post-Installation: Secrets Management
+** Step 1: Generating the Host AGE Key
+After the initial installation is complete, you will need its host AGE key to manage secrets with tools like =sops-nix=. This key is derived from the host's SSH key.
+
+1. SSH into the newly installed NixOS machine.
+   #+begin_src sh
+   ssh root@192.168.1.85
+   #+end_src
+
+2. Run the following command. It temporarily installs the =ssh-to-age= utility and pipes the public SSH host key to it, converting it to an AGE public key.
+   #+begin_src sh
+   nix-shell -p ssh-to-age --run 'cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age'
+   #+end_src
+
+3. The command will output the new AGE public key. Copy this key for the next step.
+
+** Step 2: Updating SOPS and Re-encrypting Secrets
+The new AGE key must be added to your =.sops.yaml= configuration file. This allows =sops= to encrypt secrets in a way that the new host (=susano=) can decrypt them.
+
+1. Open the =.sops.yaml= file in the root of your Nix flake.
+2. Replace the old key for the =susano= host with the new key you generated.
+
+   #+begin_src yaml
+   keys:
+     - &primary age19wvqtn4ju6k4vs8fxr34unl6xx4cv04jw0lx9ps20xlde927zfssgl4qke
+     - &susano age1vkfq9gpqfpyq3s9e79e6vw8kv9485tzna4fm3dy6p0u9uz9feu8qr9sgcf # <--- REPLACE THIS WITH THE NEW KEY
+   creation_rules:
+     - path_regex: secrets/secrets.yaml$
+       key_groups:
+         - age:
+             - *primary
+             - *susano
+   #+end_src
+
+3. After saving the updated =.sops.yaml= file, run the =updatekeys= command. This re-encrypts the specified secrets file with the new set of keys defined in =.sops.yaml=. For more information, see the [[https://github.com/getsops/sops?tab=readme-ov-file#281updatekeys-command][official documentation]].
+   #+begin_src sh
+   sops updatekeys secrets/secrets.yaml
+   #+end_src
+   Your secrets are now encrypted for both the primary key and the new host's key.
+
 * TODOs
 - [ ] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable across different hardware setups.
+- [ ] Investigate and resolve the issue where updating a user's password declaratively using a secret managed by =sops= failed after the initial installation.

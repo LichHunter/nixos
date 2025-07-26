@@ -13,6 +13,10 @@
       url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -21,6 +25,7 @@
     nixos-hardware,
     disko,
     home-manager,
+    sops-nix,
     ...
   } @ inputs: let
     inherit (self) outputs;
@@ -35,6 +40,17 @@
           disko.nixosModules.disko
           home-manager.nixosModules.home-manager
           ./minimal
+        ];
+      };
+
+      susano = nixpkgs.lib.nixosSystem {
+        specialArgs = {inherit inputs outputs extraHomeModules; };
+        modules = [
+          disko.nixosModules.disko
+          home-manager.nixosModules.home-manager
+          sops-nix.nixosModules.sops
+
+          ./main
         ];
       };
     };
