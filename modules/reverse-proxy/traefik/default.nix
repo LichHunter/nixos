@@ -4,24 +4,26 @@ with lib;
 
 let
   cfg = config.dov.reverse-proxy.traefik;
+  configFile = pkgs.writeText "duckdns-options"
+    ''
+    DUCKDNS_PROPAGATION_TIMEOUT=120
+    '';
 in {
   options.dov.reverse-proxy.traefik = { enable = mkEnableOption "traefik config"; };
 
   config = mkIf cfg.enable {
-    # 1. SOPS Configuration for the DuckDNS Token
-    #    This decrypts the secret and provides it to the Traefik service.
+    networking.firewall.allowedTCPPorts = [ 80 443 53 ];
+
     sops.secrets.duckdns-token = {
-      # The Traefik service needs permission to read this file.
       owner = "traefik";
       group = config.services.traefik.group;
     };
 
-    # 3. Traefik Service Configuration
     services.traefik = {
       enable = true;
 
       # Load the DuckDNS token as an environment variable for Traefik.
-      environmentFiles = [ config.sops.secrets.duckdns-token.path ];
+      environmentFiles = [ config.sops.secrets.duckdns-token.path configFile ];
 
       # Static configuration (traefik.yml) - defines entrypoints and certificate resolvers.
       staticConfigOptions = {
@@ -53,11 +55,7 @@ in {
               # Use the DNS-01 challenge with the DuckDNS provider
               dnsChallenge = {
                 provider = "duckdns";
-                # Traefik will get the DUCKDNS_TOKEN from the environment file.
-                resolvers = [
-                  "1.1.1.1:53"
-                  "8.8.8.8:53"
-                ];
+                disablePropagationCheck = true;
               };
             };
           };
@@ -73,14 +71,14 @@ in {
           routers = {
             # --- Router for the Traefik dashboard (optional) ---
             dashboard-router = {
-              rule = "Host(`traefik.local.susano-traefik.duckdns.org`)"; # Example: A local-only subdomain
+              rule = "Host(`traefik.susano-test.duckdns.org`)"; # Example: A local-only subdomain
               entryPoints = [ "websecure" ];
               service = "api@internal"; # Special service for the dashboard
               tls.certResolver = "duckdns";
             };
 
             immich-router = {
-              rule = "Host(`immich.susano-traefik.duckdns.org`)"; # 1. The new domain
+              rule = "Host(`immich.susano-test.duckdns.org`)"; # 1. The new domain
               entryPoints = [ "websecure" ];                        # 2. Listen on HTTPS
               service = "immich-service";                           # 3. Link to the new Immich service
               tls.certResolver = "duckdns";                         # 4. Use the same SSL resolver

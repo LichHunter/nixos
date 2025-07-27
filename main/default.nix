@@ -137,7 +137,7 @@ in {
     # Reverse Proxy
     reverse-proxy = {
       nginx.enable = false; # TODO does not work for some reason
-      traefik.enable = false; # TODO has issues retrieving certificate from duckdns
+      traefik.enable = true; # TODO has issues retrieving certificate from duckdns
       caddy.enable = false; # TODO has issues retrieving certificate from duckdns
     };
 
@@ -145,6 +145,10 @@ in {
       podman.enable = false;
       docker.enable = true;
     };
+
+    social.matrix.enable = false; # TODO does not work :)
+
+    file-server.copyparty.enable = false;
   };
 
   # DO NOT CHANGE AT ANY POINT!

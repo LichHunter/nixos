@@ -4,5 +4,7 @@
   imports = [
     ./reverse-proxy
     ./virtualisation
+    ./social
+    ./file-server
   ];
 }
