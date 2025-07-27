@@ -40,6 +40,7 @@ This guide documents the process for a minimal installation of NixOS on a Proxmo
   - [[#step-2-updating-sops-and-re-encrypting-secrets][Step 2: Updating SOPS and Re-encrypting Secrets]]
 - [[#optional-nixos-modules][Optional NixOS Modules]]
   - [[#reverse-proxies][Reverse Proxies]]
+  - [[#file-servers][File Servers]]
 - [[#notes-and-configuration-details][Notes and Configuration Details]]
   - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
   - [[#generating-hardware-configuration][Generating Hardware Configuration]]
@@ -114,7 +115,7 @@ The new AGE key must be added to your =.sops.yaml= configuration file. This allo
 ** Reverse Proxies
 The following modules can be enabled to provide a reverse proxy.
 
-*Note:* Currently, none of the available reverse proxy modules (NGINX, Traefik, Caddy) are functional. This is a known issue that needs to be investigated.
+*Note:* Previously, all reverse proxy modules were considered non-functional. Recent troubleshooting has provided a fix for Traefik, but the other modules may still have issues.
 
 *** NGINX
 The initial switch to this configuration may be slow as it waits for ACME to issue SSL certificates.
@@ -128,7 +129,6 @@ dov = {
 #+end_src
 
 *** Traefik
-This module is currently considered to be in a broken state.
 #+begin_src nix
 dov = {
   # Reverse Proxy
@@ -138,6 +138,14 @@ dov = {
 };
 #+end_src
 
+**** Troubleshooting Traefik ACME with DuckDNS
+- *Context:* Issues getting an ACME certificate from DuckDNS with Traefik.
+- *Roadblock:* The process was failing, but eventually succeeded.
+- *Possible Solutions:*
+  - Setting =disablePropagationCheck = true;= for the DNS challenge.
+  - Extending the =delay= for the DNS challenge.
+- *Notes:* It's unclear which specific option resolved the issue, but one of them, or a combination, allowed the certificate to be obtained. The first time Traefik tries to get a certificate it might fail, and a restart of the service is needed. After some time, the Let's Encrypt certificate will be received.
+
 *** Caddy
 #+begin_src nix
 dov = {
@@ -145,6 +153,22 @@ dov = {
   reverse-proxy = {
     caddy.enable = true;
   };
+};
+#+end_src
+
+** File Servers
+*** copyparty
+Provides a web-based file manager.
+#+begin_src nix
+dov = {
+  file-server.copyparty.enable = true;
+};
+#+end_src
+
+*Dependency:* For =copyparty= to function correctly in this configuration, it requires a Samba share to be mounted to the path =/MEDIA=. Therefore, the =samba= module must also be enabled:
+#+begin_src nix
+dov = {
+  samba.enable = true;
 };
 #+end_src
 
@@ -194,7 +218,7 @@ nix run github:nix-community/nixos-anywhere -- \
 #+end_src
 
 * TODOs
-- [ ] Investigate and fix the issue preventing any of the reverse proxy modules (NGINX, Traefik, Caddy) from working correctly.
+- [ ] Investigate and fix remaining issues with reverse proxy modules (NGINX, Caddy).
 - [ ] Troubleshoot and fix an issue that occurs when reloading the NixOS configuration remotely, which breaks the SSH pipe and requires entering the root password three times.
 - [ ] Investigate and resolve the issue where updating a user's password declaratively using a secret managed by =sops= failed after the initial installation.
 - [ ] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable.

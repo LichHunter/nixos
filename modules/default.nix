@@ -6,5 +6,6 @@
     ./virtualisation
     ./social
     ./file-server
+    ./samba
   ];
 }

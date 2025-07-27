@@ -4,6 +4,7 @@ with lib;
 
 let
   cfg = config.dov.reverse-proxy.traefik;
+  domain = "susano-nixos.duckdns.org";
   configFile = pkgs.writeText "duckdns-options"
     ''
     DUCKDNS_PROPAGATION_TIMEOUT=120
@@ -71,17 +72,24 @@ in {
           routers = {
             # --- Router for the Traefik dashboard (optional) ---
             dashboard-router = {
-              rule = "Host(`traefik.susano-test.duckdns.org`)"; # Example: A local-only subdomain
+              rule = "Host(`traefik.${domain}`)"; # Example: A local-only subdomain
               entryPoints = [ "websecure" ];
               service = "api@internal"; # Special service for the dashboard
               tls.certResolver = "duckdns";
             };
 
             immich-router = {
-              rule = "Host(`immich.susano-test.duckdns.org`)"; # 1. The new domain
-              entryPoints = [ "websecure" ];                        # 2. Listen on HTTPS
-              service = "immich-service";                           # 3. Link to the new Immich service
-              tls.certResolver = "duckdns";                         # 4. Use the same SSL resolver
+              rule = "Host(`immich.${domain}`)";
+              entryPoints = [ "websecure" ];
+              service = "immich-service";
+              tls.certResolver = "duckdns";
+            };
+
+            copyparty = mkIf config.dov.file-server.copyparty.enable {
+              rule = "Host(`copyparty.${domain}`)";
+              entryPoints = [ "websecure" ];
+              service = "copyparty-service";
+              tls.certResolver = "duckdns";
             };
           };
 
@@ -90,6 +98,13 @@ in {
               loadBalancer.servers = [
                 # The backend URL for Immich
                 { url = "http://192.168.1.57:2283"; }
+              ];
+            };
+
+            copyparty-service = mkIf config.dov.file-server.copyparty.enable {
+              loadBalancer.servers = [
+                # The backend URL for Immich
+                { url = "http://192.168.1.85:3923"; }
               ];
             };
           };

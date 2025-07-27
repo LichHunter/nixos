@@ -51,6 +51,7 @@
           disko.nixosModules.disko
           home-manager.nixosModules.home-manager
           sops-nix.nixosModules.sops
+          inputs.copyparty.nixosModules.default
 
           ./main
           ./modules
