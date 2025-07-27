@@ -7,5 +7,6 @@
     ./social
     ./file-server
     ./samba
+    ./searxng
   ];
 }

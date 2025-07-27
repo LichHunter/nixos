@@ -53,10 +53,10 @@ in {
             acme = {
               email = "susano@local.com";
               storage = "/var/lib/traefik/acme.json"; # Where Traefik stores certs
-              # Use the DNS-01 challenge with the DuckDNS provider
+
               dnsChallenge = {
                 provider = "duckdns";
-                disablePropagationCheck = true;
+                #disablePropagationCheck = true;
               };
             };
           };
@@ -91,6 +91,13 @@ in {
               service = "copyparty-service";
               tls.certResolver = "duckdns";
             };
+
+            searxng = mkIf config.dov.searxng.enable {
+              rule = "Host(`searxng.${domain}`)";
+              entryPoints = [ "websecure" ];
+              service = "serxng-service";
+              tls.certResolver = "duckdns";
+            };
           };
 
           services = {
@@ -104,7 +111,14 @@ in {
             copyparty-service = mkIf config.dov.file-server.copyparty.enable {
               loadBalancer.servers = [
                 # The backend URL for Immich
-                { url = "http://192.168.1.85:3923"; }
+                { url = "http://susano:3923"; }
+              ];
+            };
+
+            serxng-service = mkIf config.dov.searxng.enable {
+              loadBalancer.servers = [
+                # The backend URL for Immich
+                { url = "http://susano:8888"; }
               ];
             };
           };

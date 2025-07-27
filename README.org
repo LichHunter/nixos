@@ -41,10 +41,12 @@ This guide documents the process for a minimal installation of NixOS on a Proxmo
 - [[#optional-nixos-modules][Optional NixOS Modules]]
   - [[#reverse-proxies][Reverse Proxies]]
   - [[#file-servers][File Servers]]
+  - [[#search-engines][Search Engines]]
 - [[#notes-and-configuration-details][Notes and Configuration Details]]
   - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
   - [[#generating-hardware-configuration][Generating Hardware Configuration]]
 - [[#todos][TODOs]]
+- [[#inspiration][Inspiration]]
 
 * Prerequisites on the Target VM
 Before attempting to install NixOS with =nixos-anywhere=, you must first perform a critical setup step on the target Proxmox VM.
@@ -158,7 +160,7 @@ dov = {
 
 ** File Servers
 *** copyparty
-Provides a web-based file manager.
+Provides a web-based file manager. For more information, see the [[https://github.com/9001/copyparty][official documentation]].
 #+begin_src nix
 dov = {
   file-server.copyparty.enable = true;
@@ -169,6 +171,15 @@ dov = {
 #+begin_src nix
 dov = {
   samba.enable = true;
+};
+#+end_src
+
+** Search Engines
+*** searxng
+A privacy-respecting metasearch engine. For more information, see the [[https://wiki.nixos.org/wiki/SearXNG][NixOS Wiki page]].
+#+begin_src nix
+dov = {
+  searxng.enable = true;
 };
 #+end_src
 
@@ -224,3 +235,7 @@ nix run github:nix-community/nixos-anywhere -- \
 - [ ] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable.
 - [ ] Create a custom ISO image to streamline the installation process, potentially pre-configuring items like the root user to avoid manual console steps.
 - [ ] Develop an automated installation script to handle the post-install process, such as fetching the AGE key and updating sops, based on [[https://unmovedcentre.com/posts/remote-install-nixos-config/#update-sops-file][this guide]].
+
+* Inspiration
+The configuration and structure of this setup were inspired by the following repository:
+- [[https://github.com/notthebee/nix-config][notthebee/nix-config]]

@@ -151,6 +151,8 @@ in {
     file-server.copyparty.enable = true;
 
     samba.enable = true;
+
+    searxng.enable = true;
   };
 
   # DO NOT CHANGE AT ANY POINT!
