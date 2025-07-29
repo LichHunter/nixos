@@ -8,5 +8,6 @@
     ./file-server
     ./samba
     ./searxng
+    ./auth
   ];
 }

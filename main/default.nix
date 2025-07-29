@@ -153,6 +153,11 @@ in {
     samba.enable = true;
 
     searxng.enable = true;
+
+    auth = {
+      authelia.enable = false; # TODO needs configuration with nginx or traefik
+      # ldap.enable = false; # TODO too hard to setup, will need to take a look later
+    };
   };
 
   # DO NOT CHANGE AT ANY POINT!

@@ -70,19 +70,28 @@ in {
       dynamicConfigOptions = {
         http = {
           routers = {
-            # --- Router for the Traefik dashboard (optional) ---
-            dashboard-router = {
-              rule = "Host(`traefik.${domain}`)"; # Example: A local-only subdomain
+            authelia-router = mkIf config.dov.auth.authelia.enable {
+              rule = "Host(`auth.${domain}`)";
               entryPoints = [ "websecure" ];
-              service = "api@internal"; # Special service for the dashboard
+              service = "authelia-service"; # Points to the Authelia service below
               tls.certResolver = "duckdns";
             };
 
-            immich-router = {
-              rule = "Host(`immich.${domain}`)";
+            dashboard-router = {
+              rule = "Host(`traefik.${domain}`)";
               entryPoints = [ "websecure" ];
-              service = "immich-service";
-              tls.certResolver = "duckdns";
+              service = "api@internal";
+              tls = {
+                certResolver = "duckdns";
+                domains = [
+                  {
+                    main = "susano-nixos.duckdns.org";
+                    sans = [
+                      "*.susano-nixos.duckdns.org"
+                    ];
+                  }
+                ];
+              };
             };
 
             copyparty = mkIf config.dov.file-server.copyparty.enable {
@@ -101,10 +110,10 @@ in {
           };
 
           services = {
-            immich-service = {
+            authelia-service = mkIf config.dov.auth.authelia.enable {
               loadBalancer.servers = [
-                # The backend URL for Immich
-                { url = "http://192.168.1.57:2283"; }
+                # Points to the Authelia instance defined in authelia.nix
+                { url = "http://127.0.0.1:9091"; }
               ];
             };
 
@@ -132,10 +141,23 @@ in {
                 "your-user:$apr1$....some-hash-here...."
               ];
             };
+
+            authelia-mw = mkIf config.dov.auth.authelia.enable {
+              forwardAuth = {
+                # This address MUST match the Authelia service URL
+                address = "http://127.0.0.1:9091/api/verify?rd=https%3A%2F%2Fauth.${domain}%2F";
+                trustForwardHeader = true;
+                authResponseHeaders = [
+                  "Remote-User"
+                  "Remote-Groups"
+                  "Remote-Name"
+                  "Remote-Email"
+                ];
+              };
+            };
           };
         };
       };
     };
   };
-
 }
