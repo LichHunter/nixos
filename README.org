@@ -4,9 +4,9 @@
 #+OPTIONS: toc:t num:nil
 
 *Abstract*
-This guide documents the process for a minimal installation of NixOS on a Proxmox virtual machine. It leverages the =nixos-anywhere= tool for remote deployment and =disko= for declarative disk partitioning. It also covers the essential post-installation steps for integrating the new host with =sops-nix= for secrets management and lists available custom modules.
+This guide documents methods for installing NixOS on a Proxmox virtual machine. It covers a remote deployment using =nixos-anywhere= as well as a more advanced method of building a Proxmox image template directly with Nix. It also covers post-installation steps for secrets management with =sops-nix= and lists available custom modules.
 
-* TL;DR: Quick Install Guide
+* TL;DR: Quick Install Guide (Remote Install)
 1. *Prepare VM:* Boot the target Proxmox VM from a NixOS ISO and set a root password:
    #+begin_src sh
    passwd
@@ -15,7 +15,7 @@ This guide documents the process for a minimal installation of NixOS on a Proxmo
 2. *Deploy NixOS:* From your workstation, run =nixos-anywhere=, pointing to your flake and the VM's IP address.
    #+begin_src sh
    nix run github:nix-community/nixos-anywhere -- \
-     --flake .#susano-minimal \
+     --flake .#your-machine-name \
      --target-host root@<vm-ip-address>
    #+end_src
 
@@ -31,10 +31,10 @@ This guide documents the process for a minimal installation of NixOS on a Proxmo
    #+end_src
 
 * Table of Contents                                                            :TOC:
-- [[#tldr-quick-install-guide][TL;DR: Quick Install Guide]]
-- [[#prerequisites-on-the-target-vm][Prerequisites on the Target VM]]
-- [[#installation-process][Installation Process]]
-  - [[#deploying-nixos][Deploying NixOS]]
+- [[#tldr-quick-install-guide-remote-install][TL;DR: Quick Install Guide (Remote Install)]]
+- [[#installation-methods][Installation Methods]]
+  - [[#method-1-remote-installation-with-nixos-anywhere][Method 1: Remote Installation with nixos-anywhere]]
+  - [[#method-2-deployment-via-proxmox-image-template][Method 2: Deployment via Proxmox Image Template]]
 - [[#post-installation-secrets-management][Post-Installation: Secrets Management]]
   - [[#step-1-generating-the-host-age-key][Step 1: Generating the Host AGE Key]]
   - [[#step-2-updating-sops-and-re-encrypting-secrets][Step 2: Updating SOPS and Re-encrypting Secrets]]
@@ -48,9 +48,11 @@ This guide documents the process for a minimal installation of NixOS on a Proxmo
 - [[#todos][TODOs]]
 - [[#inspiration][Inspiration]]
 
-* Prerequisites on the Target VM
-Before attempting to install NixOS with =nixos-anywhere=, you must first perform a critical setup step on the target Proxmox VM.
+* Installation Methods
+** Method 1: Remote Installation with nixos-anywhere
+This method involves booting a minimal NixOS ISO on the target VM and then "pushing" the full configuration to it remotely.
 
+*** Prerequisites
 The minimal NixOS installation ISO does not have a default password for the =root= user. The =nixos-anywhere= command requires SSH access, which necessitates a password.
 
 1. Boot the Proxmox VM using the minimal NixOS installation ISO.
@@ -59,42 +61,73 @@ The minimal NixOS installation ISO does not have a default password for the =roo
    #+begin_src sh
    passwd
    #+end_src
-   You will be prompted to enter and confirm a new password.
 
-* Installation Process
-** Deploying NixOS
-With the root password set on the target VM, you can now run =nixos-anywhere= from your local machine to deploy your NixOS configuration.
-
-The following command uses =nix run= to execute =nixos-anywhere=, pointing it to a specific flake output (=.#susano-minimal=) and the IP address of the target VM.
+*** Deploying NixOS
+With the root password set on the target VM, run =nixos-anywhere= from your local machine to deploy your NixOS configuration.
 
 #+begin_src sh
 nix run github:nix-community/nixos-anywhere -- \
   --flake .#susano-minimal \
   --target-host root@192.168.1.85
 #+end_src
+After this step, proceed to the [[#post-installation-secrets-management][Post-Installation: Secrets Management]] section.
+
+** Method 2: Deployment via Proxmox Image Template
+This method involves building a complete Proxmox backup file (=.vma.zst=) directly with Nix. This image can then be restored in Proxmox to create a new VM or a reusable template. This approach is faster for creating multiple machines.
+
+*** Step 1: Build the Proxmox Image
+Build the image using a dedicated flake output. This will produce a compressed Proxmox backup file in the =./result/= directory.
+#+begin_src sh
+nix build .#izanami-proxmox
+#+end_src
+
+*** Step 2: Copy Image to Proxmox Host
+You must copy the image to the directory Proxmox uses for backups. First, find this location by running the following command on your Proxmox host:
+#+begin_src sh
+cat /etc/pve/storage.cfg
+#+end_src
+Look for a storage location (like =dir: local=) that includes =backup= in its =content= list. The =path= for that storage (e.g., =/var/lib/vz=) is the destination. Backups are typically stored in a =dump= subdirectory within that path.
+
+Use =scp= to copy the generated =.vma.zst= file to the backup directory.
+#+begin_src sh
+scp result/vzdump-*.vma.zst root@192.168.1.53:/var/lib/vz/dump/
+#+end_src
+
+*** Step 3: Restore Image from Proxmox UI
+1. Navigate to your Proxmox web UI.
+2. Select your backup storage location from the left-hand menu.
+3. Go to the *Backups* tab, select the newly uploaded image, and click the *Restore* button.
+4. *Important:* In the restore dialog, ensure the *Unique* checkbox is enabled. This generates a new MAC address and other unique identifiers for the restored VM.
+
+*** Step 4: Test and Convert to Template
+1. *(Recommended)* Before creating a template, test the restored VM. Create a full clone of it, start the clone, and verify you can access it as expected (e.g., via SSH with the pre-configured user).
+   #+begin_src sh
+   ssh izanami@some_ip
+   #+end_src
+2. Once confirmed, you can convert the original restored VM into a template for easy reuse. Right-click the VM and select *Convert to template*.
 
 * Post-Installation: Secrets Management
+*(This section is primarily for Method 1, or for when a new host key needs to be added after using Method 2)*
+
 ** Step 1: Generating the Host AGE Key
-After the initial installation is complete, you will need its host AGE key to manage secrets with tools like =sops-nix=. This key is derived from the host's SSH key.
+After the installation is complete, you will need the host's AGE key to manage secrets with tools like =sops-nix=.
 
 1. SSH into the newly installed NixOS machine.
    #+begin_src sh
    ssh root@192.168.1.85
    #+end_src
 
-2. Run the following command. It temporarily installs the =ssh-to-age= utility and pipes the public SSH host key to it, converting it to an AGE public key.
+2. Run the following command to convert the host's public SSH key to an AGE key.
    #+begin_src sh
    nix-shell -p ssh-to-age --run 'cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age'
    #+end_src
-
-3. The command will output the new AGE public key. Copy this key for the next step.
+3. Copy the output AGE key for the next step.
 
 ** Step 2: Updating SOPS and Re-encrypting Secrets
-The new AGE key must be added to your =.sops.yaml= configuration file. This allows =sops= to encrypt secrets in a way that the new host (=susano=) can decrypt them.
+The new AGE key must be added to your =.sops.yaml= file.
 
 1. Open the =.sops.yaml= file in the root of your Nix flake.
-2. Replace the old key for the =susano= host with the new key you generated.
-
+2. Replace the old key for the host with the new key you generated.
    #+begin_src yaml
    keys:
      - &primary age19wvqtn4ju6k4vs8fxr34unl6xx4cv04jw0lx9ps20xlde927zfssgl4qke
@@ -107,11 +140,10 @@ The new AGE key must be added to your =.sops.yaml= configuration file. This allo
              - *susano
    #+end_src
 
-3. After saving the updated =.sops.yaml= file, run the =updatekeys= command. This re-encrypts the specified secrets file with the new set of keys defined in =.sots.yaml=. For more information, see the [[https://github.com/getsops/sops?tab=readme-ov-file#281updatekeys-command][official documentation]].
+3. After saving, run the =updatekeys= command to re-encrypt the secrets file with the new set of keys.
    #+begin_src sh
    sops updatekeys secrets/secrets.yaml
    #+end_src
-   Your secrets are now encrypted for both the primary key and the new host's key.
 
 * Optional NixOS Modules
 ** Reverse Proxies
@@ -146,7 +178,7 @@ dov = {
 - *Possible Solutions:*
   - Setting =disablePropagationCheck = true;= for the DNS challenge.
   - Extending the =delay= for the DNS challenge.
-- *Notes:* It's unclear which specific option resolved the issue, but one of them, or a combination, allowed the certificate to be obtained. The first time Traefik tries to get a certificate it might fail, and a restart of the service is needed. After some time, the Let's Encrypt certificate will be received.
+- *Notes:* It's unclear which specific option resolved the issue. The first time Traefik tries to get a certificate it might fail, and a restart of the service is needed. After some time, the Let's Encrypt certificate will be received.
 
 *** Caddy
 #+begin_src nix
@@ -218,8 +250,6 @@ For a complete example, you can refer to the official =disko= repository: [[http
 
 ** Generating Hardware Configuration
 The =nixos-anywhere= tool can automatically generate a hardware configuration file from the target machine. This is useful for capturing machine-specific settings.
-
-To do this, include the =--generate-hardware-config= flag in your command. The following example shows how to generate the file and save it as =./hardware-configuration.nix= in your local flake directory.
 
 #+begin_src sh
 nix run github:nix-community/nixos-anywhere -- \
