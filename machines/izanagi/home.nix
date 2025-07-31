@@ -1,9 +1,9 @@
-{ config, lib, pkgs, username, ... }:
+{ config, lib, pkgs, inputs, extraHomeModules, username, ... }:
 
 {
   home = {
-    inherit username;
     stateVersion = "25.05";
+    username = username;
     homeDirectory = "/home/${username}";
   };
 

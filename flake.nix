@@ -77,6 +77,21 @@
             ./machines/izanagi-minimal
           ];
         };
+      izanagi =
+        let
+          username = "izanagi";
+        in nixpkgs.lib.nixosSystem {
+          specialArgs = {inherit inputs outputs extraHomeModules username;};
+          modules = [
+            disko.nixosModules.disko
+            home-manager.nixosModules.home-manager
+            sops-nix.nixosModules.sops
+            inputs.copyparty.nixosModules.default
+
+            ./machines/izanagi
+            ./modules
+          ];
+        };
     };
 
     packages.x86_64-linux = {
