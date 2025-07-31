@@ -4,7 +4,12 @@
   inputs = {
     # Nixpkgs
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+    nixos-generators = {
+      url = "github:nix-community/nixos-generators";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -25,6 +30,7 @@
     self,
     nixpkgs,
     nixos-hardware,
+    nixos-generators,
     disko,
     home-manager,
     sops-nix,
@@ -34,6 +40,8 @@
     extraHomeModules = [
       ./hm-modules
     ];
+
+    upkgs = import inputs.unstable { system = "x86_64-linux"; config.allowUnfree = true; };
   in {
     nixosConfigurations = {
       susano-minimal = nixpkgs.lib.nixosSystem {
@@ -41,7 +49,7 @@
         modules = [
           disko.nixosModules.disko
           home-manager.nixosModules.home-manager
-          ./minimal
+          ./machines/susano-minimal
         ];
       };
 
@@ -53,9 +61,60 @@
           sops-nix.nixosModules.sops
           inputs.copyparty.nixosModules.default
 
-          ./main
+          ./machines/susano
           ./modules
         ];
+      };
+
+      izanagi-minimal =
+        let
+          username = "izanagi";
+        in nixpkgs.lib.nixosSystem {
+          specialArgs = {inherit inputs outputs extraHomeModules username;};
+          modules = [
+            disko.nixosModules.disko
+            home-manager.nixosModules.home-manager
+            ./machines/izanagi-minimal
+          ];
+        };
+    };
+
+    packages.x86_64-linux = {
+      izanami-proxmox = nixos-generators.nixosGenerate {
+        system = "x86_64-linux";
+        modules = [
+          home-manager.nixosModules.home-manager
+
+          ./iso/proxmox
+        ];
+
+        specialArgs = {
+          inherit inputs;
+
+          username = "izanami";
+          extraHomeModules = [
+            ./hm-modules
+          ];
+        };
+
+        format = "proxmox";
+      };
+    };
+
+    devShells = {
+      "x86_64-linux" = {
+        default = upkgs.mkShell {
+          buildInputs = with upkgs; [
+
+            # AI Coding agents
+            gemini-cli
+            opencode
+            claude-code
+          ];
+
+          shellHook = ''
+          '';
+        };
       };
     };
   };

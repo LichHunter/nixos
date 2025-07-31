@@ -15,7 +15,7 @@ This guide documents the process for a minimal installation of NixOS on a Proxmo
 2. *Deploy NixOS:* From your workstation, run =nixos-anywhere=, pointing to your flake and the VM's IP address.
    #+begin_src sh
    nix run github:nix-community/nixos-anywhere -- \
-     --flake .#your-machine-name \
+     --flake .#susano-minimal \
      --target-host root@<vm-ip-address>
    #+end_src
 

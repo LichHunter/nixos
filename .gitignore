@@ -5,3 +5,5 @@ tmp/
 
 
 result
+.direnv
+*.local.md
