@@ -4,12 +4,21 @@ with lib;
 
 let
   cfg = config.dov.virtualisation.docker;
-  username = "susano";
 in {
-  options.dov.virtualisation.docker = { enable = mkEnableOption "docker config"; };
+  options.dov.virtualisation.docker = {
+    enable = mkEnableOption "docker config";
+    username = mkOption {
+      default = "susano";
+      type = types.string;
+    };
+    isBtrfsStorageDriver = mkOption {
+      default = true;
+      type = types.bool;
+    };
+  };
 
   config = mkIf cfg.enable {
-    users.extraGroups.docker.members = [ username ];
+    users.extraGroups.docker.members = [ cfg.username ];
 
     virtualisation.docker = {
       enable = true;
@@ -19,7 +28,7 @@ in {
       };
 
       # TODO use if disko is btrfs
-      storageDriver = "btrfs";
+      storageDriver = mkIf cfg.isBtrfsStorageDriver "btrfs";
     };
   };
 

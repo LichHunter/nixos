@@ -1,7 +1,6 @@
-{ config, pkgs, extraHomeModules, inputs, lib, ... }:
+{ config, pkgs, extraHomeModules, inputs, lib, username, ... }:
 
 let
-  username = "susano";
   flakeInputs = lib.filterAttrs (_: lib.isType "flake") inputs;
 in {
   imports =
@@ -32,7 +31,7 @@ in {
       nix-path = config.nix.nixPath;
 
       # Allow user to reubild nixos without sudo
-      trusted-users = [ "root" username ];
+      trusted-users = [ "root" "omen" username ];
     };
     # Opinionated: disable channels
     channel.enable = false;
@@ -129,7 +128,12 @@ in {
   dov = {
     virtualisation = {
       podman.enable = false;
-      docker.enable = true;
+      docker = {
+        enable = true;
+        isBtrfsStorageDriver = false;
+
+        inherit username;
+      };
     };
   };
 
