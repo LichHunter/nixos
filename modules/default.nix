@@ -10,5 +10,6 @@
     ./searxng
     ./auth
     ./development
+    ./window-manager
   ];
 }

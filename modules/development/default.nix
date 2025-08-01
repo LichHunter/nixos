@@ -3,5 +3,6 @@
 {
   imports = [
     ./nix-vscode-server
+    ./emacs
   ];
 }

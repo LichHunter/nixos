@@ -2,7 +2,6 @@
 
 {
   imports = [
-    ./zsh
-    ./addition
+    ./zen
   ];
 }

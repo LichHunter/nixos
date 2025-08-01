@@ -9,7 +9,7 @@ in {
     enable = mkEnableOption "docker config";
     username = mkOption {
       default = "susano";
-      type = types.string;
+      type = types.str;
     };
     isBtrfsStorageDriver = mkOption {
       default = true;
