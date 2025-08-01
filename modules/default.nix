@@ -9,5 +9,6 @@
     ./samba
     ./searxng
     ./auth
+    ./development
   ];
 }

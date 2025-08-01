@@ -47,8 +47,16 @@ in {
     useOSProber = true;
   };
 
-  networking.hostName = username;
-  networking.networkmanager.enable = true;
+  networking = {
+    hostName = username;
+    networkmanager.enable = true;
+
+    firewall.allowedTCPPorts = [
+      8080
+      8090 # Mongo express port
+      4200 # Angular application port
+    ];
+  };
 
   # Set your time zone.
   time.timeZone = "Europe/Warsaw";
@@ -76,6 +84,7 @@ in {
     hashedPassword = "$6$fgXNf1aUOgGn7QWQ$rOcVKUnBC7td/KVdyLzknQy4LjgQDETKPIxivi1yWd4boWbRgITr/.iYlekZOuRuC6m.WydgV9PviqlrioDF91";
     extraGroups = [ "networkmanager" "wheel" ];
     packages = with pkgs; [
+      git
     ];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBcGhVpjmWEw1GEw0y/ysJPa2v3+u/Rt/iES/Se2huH2 alexander0derevianko@gmail.com"
@@ -88,6 +97,7 @@ in {
     vim
     wget
     ripgrep
+    direnv
   ];
 
   services.openssh = {
@@ -134,6 +144,10 @@ in {
 
         inherit username;
       };
+    };
+
+    development = {
+      vscode-server.enable = true;
     };
   };
 

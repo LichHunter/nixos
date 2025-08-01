@@ -24,6 +24,8 @@
     };
 
     copyparty.url = "github:9001/copyparty";
+
+    vscode-server.url = "github:nix-community/nixos-vscode-server";
   };
 
   outputs = {
@@ -86,7 +88,10 @@
             disko.nixosModules.disko
             home-manager.nixosModules.home-manager
             sops-nix.nixosModules.sops
+
+            # Applications
             inputs.copyparty.nixosModules.default
+            inputs.vscode-server.nixosModules.default
 
             ./machines/izanagi
             ./modules
