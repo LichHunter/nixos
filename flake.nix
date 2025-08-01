@@ -119,6 +119,26 @@
 
         format = "proxmox";
       };
+
+      izanami-iso = nixos-generators.nixosGenerate {
+        system = "x86_64-linux";
+        modules = [
+          home-manager.nixosModules.home-manager
+
+          ./iso/iso
+        ];
+
+        specialArgs = {
+          inherit inputs;
+
+          username = "izanami";
+          extraHomeModules = [
+            ./hm-modules
+          ];
+        };
+
+        format = "iso";
+      };
     };
 
     devShells = {
