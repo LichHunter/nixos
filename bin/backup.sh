@@ -21,7 +21,7 @@ DIRECTORIES_TO_BACKUP=(
     ~/Pictures
     ~/org
     ~/nixos-dotfiles
-    ~/susano-nixos
+    ~/nixos
     ~/hetzner-nixos
     ~/.authinfo.gpg
 )

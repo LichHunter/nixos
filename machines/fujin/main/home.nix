@@ -16,10 +16,10 @@
           sc = "source $HOME/.zshrc";
           psax = "ps ax | grep";
           cp = "rsync -ah --progress";
-          nixos-build = "nixos-rebuild build --flake ~/susano-nixos/#${username}";
-          nixos-test = "sudo nixos-rebuild test --flake ~/susano-nixos/#${username}";
-          nixos-switch = "sudo nixos-rebuild switch --flake ~/susano-nixos/#${username}";
-          nixos-boot = "sudo nixos-rebuild boot --flake ~/susano-nixos/#${username}";
+          nixos-build = "nixos-rebuild build --flake ~/nixos/#${username}";
+          nixos-test = "sudo nixos-rebuild test --flake ~/nixos/#${username}";
+          nixos-switch = "sudo nixos-rebuild switch --flake ~/nixos/#${username}";
+          nixos-boot = "sudo nixos-rebuild boot --flake ~/nixos/#${username}";
         };
       };
 

@@ -4,54 +4,96 @@
 #+OPTIONS: toc:t num:nil
 
 *Abstract*
-This guide documents methods for installing NixOS on a Proxmox virtual machine. It covers a remote deployment using =nixos-anywhere= as well as a more advanced method of building a Proxmox image template directly with Nix. It also covers post-installation steps for secrets management with =sops-nix= and lists available custom modules.
+This guide documents methods for installing NixOS on a Proxmox virtual machine and a bare-metal machine (Fujin). It covers remote deployment, bare-metal installation with Disko, and building Proxmox image templates. It also covers post-installation steps for secrets management with =sops-nix= and lists available custom modules.
 
-* TL;DR: Quick Install Guide (Remote Install)
+* TL;DR: Fujin Quick Install (Bare Metal)
+1. *Boot Live Environment:* Boot into a NixOS installer or another Linux environment (like Izanami).
+2. *Clone Repo:* Clone this repository.
+   #+begin_src sh
+   git clone https://github.com/LichHunter/nixos
+   #+end_src
+3. *Install with Disko:* Run the Disko installer script for the minimal configuration.
+   #+begin_src sh
+   nix run github:nix-community/disko#disko-install -- --flake .#fujin-minimal --disk main /dev/nvme0n1
+   #+end_src
+4. *Reboot & Setup:* Reboot into the new system. Mount your backup drive, restore your SSH keys, and clone the repository again.
+5. *Rebuild to Main Config:* Use the custom script to switch to the full configuration.
+   #+begin_src sh
+   ./bin/rebuild.sh boot
+   #+end_src
+
+* TL;DR: Proxmox Quick Install (Remote)
 1. *Prepare VM:* Boot the target Proxmox VM from a NixOS ISO and set a root password:
    #+begin_src sh
    passwd
    #+end_src
-
-2. *Deploy NixOS:* From your workstation, run =nixos-anywhere=, pointing to your flake and the VM's IP address.
+2. *Deploy NixOS:* From your workstation, run =nixos-anywhere=.
    #+begin_src sh
-   nix run github:nix-community/nixos-anywhere -- \
-     --flake .#your-machine-name \
-     --target-host root@<vm-ip-address>
+   nix run github:nix-community/nixos-anywhere -- --flake .#your-machine-name --target-host root@<vm-ip-address>
    #+end_src
-
-3. *Get Host Key:* After installation, SSH into the new VM and get its host AGE key.
-   #+begin_src sh
-   ssh root@<vm-ip-address>
-   nix-shell -p ssh-to-age --run 'cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age'
-   #+end_src
-
-4. *Update Secrets:* On your workstation, add the new AGE key to =.sops.yaml= and re-encrypt secrets.
+3. *Manage Secrets:* Get the host's AGE key, add it to =.sops.yaml=, and re-encrypt.
    #+begin_src sh
    sops updatekeys secrets/secrets.yaml
    #+end_src
 
 * Table of Contents                                                            :TOC:
-- [[#tldr-quick-install-guide-remote-install][TL;DR: Quick Install Guide (Remote Install)]]
-- [[#installation-methods][Installation Methods]]
+- [[#tldr-fujin-quick-install-bare-metal][TL;DR: Fujin Quick Install (Bare Metal)]]
+- [[#tldr-proxmox-quick-install-remote][TL;DR: Proxmox Quick Install (Remote)]]
+- [[#fujin-installation-bare-metal][Fujin Installation (Bare Metal)]]
+  - [[#boot-drive-installation][Boot Drive Installation]]
+  - [[#minimal-system-setup][Minimal System Setup]]
+- [[#proxmox-installation-methods][Proxmox Installation Methods]]
   - [[#method-1-remote-installation-with-nixos-anywhere][Method 1: Remote Installation with nixos-anywhere]]
   - [[#method-2-deployment-via-proxmox-image-template][Method 2: Deployment via Proxmox Image Template]]
 - [[#post-installation-secrets-management][Post-Installation: Secrets Management]]
-  - [[#step-1-generating-the-host-age-key][Step 1: Generating the Host AGE Key]]
-  - [[#step-2-updating-sops-and-re-encrypting-secrets][Step 2: Updating SOPS and Re-encrypting Secrets]]
 - [[#optional-nixos-modules][Optional NixOS Modules]]
-  - [[#reverse-proxies][Reverse Proxies]]
-  - [[#file-servers][File Servers]]
-  - [[#search-engines][Search Engines]]
 - [[#notes-and-configuration-details][Notes and Configuration Details]]
-  - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
-  - [[#generating-hardware-configuration][Generating Hardware Configuration]]
 - [[#todos][TODOs]]
 - [[#inspiration][Inspiration]]
-- [[#fujin-install][Fujin install]]
-  - [[#boot-drive][Boot Drive]]
-  - [[#minimal][Minimal]]
 
-* Installation Methods
+* Fujin Installation (Bare Metal)
+** Boot Drive Installation
+1. Boot into izanami or another suitable Linux live environment.
+2. Clone the repository:
+   #+begin_src sh
+   git clone https://github.com/LichHunter/nixos
+   #+end_src
+3. Use Disko to install the minimal configuration for Fujin.
+   #+begin_src sh
+   nix run github:nix-community/disko#disko-install -- --flake .#fujin-minimal --disk main /dev/nvme0n1
+   #+end_src
+4. Reboot the machine.
+
+** Minimal System Setup
+1. Mount your backup drive:
+   #+begin_src sh
+   mkdir /tmp/drive; sudo mount /dev/sda1 /tmp/drive
+   #+end_src
+2. Copy the latest backup from the drive to your home folder.
+3. Unarchive the backup to restore essential files, including your SSH keys.
+4. Clone your NixOS repository using your SSH key:
+   #+begin_src sh
+   git clone git@github.com:LichHunter/nixos
+   #+end_src
+5. Upgrade to the main configuration using the provided rebuild script. This script handles the full `nixos-rebuild boot --flake .#fujin` command, including `sudo` and build host settings.
+   #+begin_src bash
+   ./bin/rebuild.sh boot
+   #+end_src
+6. Install Emacs:
+   #+begin_src bash
+   git clone --depth 1 https://github.com/doomemacs/doomemacs ~/.config/emacs
+   ~/.config/emacs/bin/doom install
+   #+end_src
+7. Copy your custom Doom Emacs configs:
+   #+begin_src bash
+   cp -r ~/nixos/machines/fujin/main/doom-configs/* ~/.config/doom/
+   #+end_src
+8. Sync your Doom Emacs configuration:
+   #+begin_src bash
+   ~/.config/emacs/bin/doom sync
+   #+end_src
+
+* Proxmox Installation Methods
 ** Method 1: Remote Installation with nixos-anywhere
 This method involves booting a minimal NixOS ISO on the target VM and then "pushing" the full configuration to it remotely.
 
@@ -262,6 +304,8 @@ nix run github:nix-community/nixos-anywhere -- \
 #+end_src
 
 * TODOs
+- [ ] Update izanagi to include git by default.
+- [ ] Add NetworkManager to the fujin-minimal configuration.
 - [ ] Investigate and fix remaining issues with reverse proxy modules (NGINX, Caddy).
 - [ ] Troubleshoot and fix an issue that occurs when reloading the NixOS configuration remotely, which breaks the SSH pipe and requires entering the root password three times.
 - [ ] Investigate and resolve the issue where updating a user's password declaratively using a secret managed by =sops= failed after the initial installation.
@@ -272,32 +316,3 @@ nix run github:nix-community/nixos-anywhere -- \
 * Inspiration
 The configuration and structure of this setup were inspired by the following repository:
 - [[https://github.com/notthebee/nix-config][notthebee/nix-config]]
-
-* Fujin install
-** Boot Drive
-1. Boot into izanami
-2. git clone repo 'git clone https://github.com/LichHunter/susano-nixos'
-3. Disko install fujin-minimal 'nix run github:nix-community/disko#disko-install -- --flake .#fujin-minimal --disk main /dev/nvme0n1'
-4. Reboot
-** Minimal
-1. Mount backup drive 'mkdir /tmp/drive; sudo mount /dev/sda1 /tmp/drive'
-2. Copy latest backup from drive to home folder
-3. Unarchive it (you should now have ssh keys)
-4. Git clone nixos repo 'git clone git@github.com:LichHunter/susano-nixos'
-5. Upgrade to man configuration
-  #+begin_src bash
-sudo nixos-rebuild boot --flake .#fujin
-  #+end_src
-6. Install emacs
-  #+begin_src bash
-git clone --depth 1 https://github.com/doomemacs/doomemacs ~/.config/emacs
-~/.config/emacs/bin/doom install
-  #+end_src
-7. Copy configs for emacs
-  #+begin_src bash
-cp ~/susano-nixos/machines/fujin/main/doom-configs ~/.config/doom
-  #+end_src
-8. Update doom-emacs
-  #+begin_src bash
-~/.config/emacs/bin/doom sync
-  #+end_src
