@@ -13,6 +13,7 @@ in {
   config = mkIf cfg.enable {
     home.packages = with pkgs; [
       wlogout
+      pavucontrol # gui sound manager
     ];
 
     programs.waybar = {

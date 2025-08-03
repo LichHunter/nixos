@@ -32,6 +32,8 @@
     };
   };
 
+  networking.networkmanager.enable = true;
+
   ###
   # Thunar configurations
   ###
@@ -48,6 +50,8 @@
     virtualisation.docker.enable = true;
 
     window-manager.hypr.enable = true;
+
+    display-manager.ly.enable = true;
   };
 
   ###

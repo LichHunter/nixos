@@ -47,6 +47,9 @@ This guide documents methods for installing NixOS on a Proxmox virtual machine. 
   - [[#generating-hardware-configuration][Generating Hardware Configuration]]
 - [[#todos][TODOs]]
 - [[#inspiration][Inspiration]]
+- [[#fujin-install][Fujin install]]
+  - [[#boot-drive][Boot Drive]]
+  - [[#minimal][Minimal]]
 
 * Installation Methods
 ** Method 1: Remote Installation with nixos-anywhere
@@ -269,3 +272,32 @@ nix run github:nix-community/nixos-anywhere -- \
 * Inspiration
 The configuration and structure of this setup were inspired by the following repository:
 - [[https://github.com/notthebee/nix-config][notthebee/nix-config]]
+
+* Fujin install
+** Boot Drive
+1. Boot into izanami
+2. git clone repo 'git clone https://github.com/LichHunter/susano-nixos'
+3. Disko install fujin-minimal 'nix run github:nix-community/disko#disko-install -- --flake .#fujin-minimal --disk main /dev/nvme0n1'
+4. Reboot
+** Minimal
+1. Mount backup drive 'mkdir /tmp/drive; sudo mount /dev/sda1 /tmp/drive'
+2. Copy latest backup from drive to home folder
+3. Unarchive it (you should now have ssh keys)
+4. Git clone nixos repo 'git clone git@github.com:LichHunter/susano-nixos'
+5. Upgrade to man configuration
+  #+begin_src bash
+sudo nixos-rebuild boot --flake .#fujin
+  #+end_src
+6. Install emacs
+  #+begin_src bash
+git clone --depth 1 https://github.com/doomemacs/doomemacs ~/.config/emacs
+~/.config/emacs/bin/doom install
+  #+end_src
+7. Copy configs for emacs
+  #+begin_src bash
+cp ~/susano-nixos/machines/fujin/main/doom-configs ~/.config/doom
+  #+end_src
+8. Update doom-emacs
+  #+begin_src bash
+~/.config/emacs/bin/doom sync
+  #+end_src

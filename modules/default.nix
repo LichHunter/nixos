@@ -11,5 +11,6 @@
     ./auth
     ./development
     ./window-manager
+    ./display-manager
   ];
 }

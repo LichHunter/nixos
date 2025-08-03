@@ -3,7 +3,6 @@
 {
   imports = [
     ./shell
-    ./window-manager
     ./bar
     ./launcher
     ./random
