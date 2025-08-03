@@ -37,7 +37,13 @@
 
     kanshi.enable = true;
 
-    terminal.alacritty.enable = true;
+    terminal = {
+      alacritty.enable = true;
+      ghostty = {
+        enable = true;
+        shell = "${pkgs.nushell}/bin/nu";
+      };
+    };
   };
 
   programs = {
