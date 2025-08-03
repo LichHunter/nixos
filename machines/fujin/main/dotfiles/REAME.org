@@ -1,0 +1,9 @@
+#+title: Stow managed files
+
+* Why
+These dotfiles managed by stow as I tend to tinker with them from time to time and manage them with home-manager is not very practical as you would need to do switch everytime you do the change in order to apply it, but stow just creates symlinks to the files and I can easily have them in repo and use them as configs else where.
+
+* How to
+#+begin_src bash
+stow --target=$HOME .
+#+end_src

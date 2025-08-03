@@ -16,6 +16,9 @@
     packages = with pkgs; [
       # thunar plugin to manager archives
       xfce.thunar-archive-plugin
+
+      # Stow, to manage my doom emacs configs
+      stow
     ];
   };
 
