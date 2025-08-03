@@ -4,9 +4,11 @@ let
   flakeInputs = lib.filterAttrs (_: lib.isType "flake") inputs;
 in {
   imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-      ./disko-config.nix
+    [
+      ../../minimal.nix
+
+      ../hardware-configuration.nix
+      ../disko-config.nix
       ./sops.nix
     ];
 
