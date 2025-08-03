@@ -3,6 +3,8 @@
 let flakeInputs = lib.filterAttrs (_: lib.isType "flake") inputs;
 in {
 
+  networking.hostName = username;
+
   users.mutableUsers = false;
 
   users.users.${username} = {

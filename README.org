@@ -17,7 +17,16 @@ This guide documents methods for installing NixOS on a Proxmox virtual machine a
    nix run github:nix-community/disko#disko-install -- --flake .#fujin-minimal --disk main /dev/nvme0n1
    #+end_src
 4. *Reboot & Setup:* Reboot into the new system. Mount your backup drive, restore your SSH keys, and clone the repository again.
-5. *Rebuild to Main Config:* Use the custom script to switch to the full configuration.
+5. *Setup Root SSH for Remote Builds:* Generate SSH key for root user to enable remote builds.
+   #+begin_src sh
+   sudo ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519
+   #+end_src
+6. *Update Izanagi Configuration:* Add the new root public key to izanagi's authorized keys for remote builds.
+   #+begin_src sh
+   sudo cat /root/.ssh/id_ed25519.pub
+   # Copy this key and add it to machines/izanagi/default.nix in the openssh.authorizedKeys.keys section
+   #+end_src
+7. *Rebuild to Main Config:* Use the custom script to switch to the full configuration.
    #+begin_src sh
    ./bin/rebuild.sh boot
    #+end_src
@@ -48,11 +57,16 @@ This guide documents methods for installing NixOS on a Proxmox virtual machine a
 - [[#post-installation-secrets-management][Post-Installation: Secrets Management]]
   - [[#step-1-generating-the-host-age-key][Step 1: Generating the Host AGE Key]]
   - [[#step-2-updating-sops-and-re-encrypting-secrets][Step 2: Updating SOPS and Re-encrypting Secrets]]
+- [[#available-utility-scripts][Available Utility Scripts]]
+  - [[#rebuildsh---enhanced-nixos-rebuild-wrapper][rebuild.sh - Enhanced NixOS Rebuild Wrapper]]
+  - [[#backupsh---automated-backup-script][backup.sh - Automated Backup Script]]
+  - [[#hash-utilsh---file-hash-verification][hash-util.sh - File Hash Verification]]
 - [[#optional-nixos-modules][Optional NixOS Modules]]
   - [[#reverse-proxies][Reverse Proxies]]
   - [[#file-servers][File Servers]]
   - [[#search-engines][Search Engines]]
 - [[#notes-and-configuration-details][Notes and Configuration Details]]
+  - [[#remote-build-configuration][Remote Build Configuration]]
   - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
   - [[#generating-hardware-configuration][Generating Hardware Configuration]]
 - [[#todos][TODOs]]
@@ -82,23 +96,32 @@ This guide documents methods for installing NixOS on a Proxmox virtual machine a
    #+begin_src sh
    git clone git@github.com:LichHunter/nixos
    #+end_src
-5. Upgrade to the main configuration using the provided rebuild script. This script handles the full `nixos-rebuild boot --flake .#fujin` command, including `sudo` and build host settings.
+5. *(Optional)* Setup SSH for remote builds. Generate SSH key for root user to enable remote builds on izanagi:
+   #+begin_src sh
+   sudo ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519
+   #+end_src
+6. *(Optional)* Add the root public key to izanagi configuration. First, get the public key:
+   #+begin_src sh
+   sudo cat /root/.ssh/id_ed25519.pub
+   #+end_src
+   Then add this key to the =openssh.authorizedKeys.keys= section in =machines/izanagi/default.nix= and rebuild izanagi.
+7. Upgrade to the main configuration using the provided rebuild script. This script handles the full =nixos-rebuild boot --flake .#fujin= command, including =sudo= and build host settings.
    #+begin_src bash
    ./bin/rebuild.sh boot
    #+end_src
-6. Install Emacs:
+8. Install Emacs:
    #+begin_src bash
    git clone --depth 1 https://github.com/doomemacs/doomemacs ~/.config/emacs
    ~/.config/emacs/bin/doom install
    #+end_src
-7. Copy your custom Doom Emacs configs:
+9. Copy your custom Doom Emacs configs:
    #+begin_src bash
    cp -r ~/nixos/machines/fujin/main/doom-configs/* ~/.config/doom/
    #+end_src
-8. Sync your Doom Emacs configuration:
-   #+begin_src bash
-   ~/.config/emacs/bin/doom sync
-   #+end_src
+10. Sync your Doom Emacs configuration:
+    #+begin_src bash
+    ~/.config/emacs/bin/doom sync
+    #+end_src
 
 * Proxmox Installation Methods
 ** Method 1: Remote Installation with nixos-anywhere
@@ -197,6 +220,120 @@ The new AGE key must be added to your =.sops.yaml= file.
    sops updatekeys secrets/secrets.yaml
    #+end_src
 
+* Available Utility Scripts
+This repository includes several utility scripts in the =bin/= directory to simplify common tasks.
+
+** rebuild.sh - Enhanced NixOS Rebuild Wrapper
+A powerful wrapper around =nixos-rebuild= that provides intelligent defaults and simplified syntax for various deployment scenarios.
+
+*** Features
+- Smart defaults for build hosts and machine configurations
+- Automatic sudo handling for local vs remote operations
+- Support for remote builds and deployments
+- Dry-run capabilities for testing changes
+- Comprehensive help and error messages
+
+*** Basic Usage
+#+begin_src sh
+# Local build and switch (uses local machine)
+./bin/rebuild.sh switch --local-build
+
+# Remote build, local deployment (default behavior)
+./bin/rebuild.sh switch
+
+# Build only, no deployment
+./bin/rebuild.sh build
+#+end_src
+
+*** Remote Operations
+#+begin_src sh
+# Deploy to remote machine (auto-detects machine name from hostname)
+./bin/rebuild.sh switch --target-host user@remote-host
+
+# Build on izanagi, deploy to susano
+./bin/rebuild.sh switch --machine susano --target-host susano@susano
+
+# Build on specific host, deploy to another
+./bin/rebuild.sh switch --build-host builder@build-host --target-host user@target-host
+#+end_src
+
+*** Advanced Examples
+#+begin_src sh
+# Test configuration without making it permanent
+./bin/rebuild.sh test --target-host susano@susano
+
+# Dry run to see what would be built/changed
+./bin/rebuild.sh switch --dry-run --verbose
+
+# Build specific machine with custom build host
+./bin/rebuild.sh build --machine fujin --build-host powerful@workstation
+
+# Fast remote deployment (skip building Nix)
+./bin/rebuild.sh switch --target-host remote --fast
+
+# Verbose output with detailed tracing
+./bin/rebuild.sh build --verbose --show-trace
+#+end_src
+
+*** Command Reference
+**** Commands
+- =build= - Build the configuration without deploying
+- =test= - Build and activate temporarily (reverts on reboot)
+- =switch= - Build and activate permanently
+- =boot= - Build and set as boot default (requires reboot)
+
+**** Options
+- =--local-build= - Force building on local machine
+- =--build-host HOST= - Specify remote build host (default: =izanagi@izanagi=)
+- =--target-host HOST= - Deploy to remote target host
+- =--machine NAME= - Machine configuration name (auto-detected if not specified)
+- =--use-remote-sudo= - Use sudo on remote target (auto-enabled for switch/boot)
+- =--fast= - Skip building Nix (useful for remote builds)
+- =--dry-run= - Show what would happen without making changes
+- =--verbose= - Enable verbose output
+- =--show-trace= - Show detailed error traces
+
+** backup.sh - Automated Backup Script
+Creates timestamped tar archives of important directories and files.
+
+*** Usage
+#+begin_src sh
+# Create backup with current timestamp
+./bin/backup.sh
+#+end_src
+
+*** What it backs up
+- =~/.gnupg= - GPG keys and configuration
+- =~/.ssh= - SSH keys and configuration
+- =~/Documents= - Personal documents
+- =~/Pictures= - Photos and images
+- =~/org= - Org-mode files
+- =~/nixos-dotfiles= - NixOS configuration repository
+- =~/nixos= - Alternative NixOS configuration location
+- =~/hetzner-nixos= - Hetzner-specific configurations
+- =~/.authinfo.gpg= - Encrypted authentication information
+
+*** Backup location
+Backups are stored in =~/Backup/= with filenames like =backup-YYYYMMDDHHMIN.tar=.
+
+** hash-util.sh - File Hash Verification
+Verifies file integrity using SHA256 checksums.
+
+*** Usage
+#+begin_src sh
+# Verify a file against its expected hash
+./bin/hash-util.sh --path /path/to/file --hash <expected-sha256-hash>
+#+end_src
+
+*** Examples
+#+begin_src sh
+# Verify downloaded ISO
+./bin/hash-util.sh --path nixos.iso --hash a1b2c3d4e5f6...
+
+# Check configuration file integrity
+./bin/hash-util.sh --path configuration.nix --hash $(sha256sum configuration.nix | cut -d' ' -f1)
+#+end_src
+
 * Optional NixOS Modules
 ** Reverse Proxies
 The following modules can be enabled to provide a reverse proxy.
@@ -268,6 +405,29 @@ dov = {
 #+end_src
 
 * Notes and Configuration Details
+** Remote Build Configuration
+To leverage remote builds (e.g., building fujin configurations on izanagi), you need to set up SSH keys for the root user:
+
+1. On the machine that will initiate builds (e.g., fujin), generate SSH keys for root:
+   #+begin_src sh
+   sudo ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519
+   #+end_src
+
+2. Add the root public key to the build host's (e.g., izanagi) authorized keys in the NixOS configuration:
+   #+begin_src nix
+   users.users.${username} = {
+     openssh.authorizedKeys.keys = [
+       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBcGhVpjmWEw1GEw0y/ysJPa2v3+u/Rt/iES/Se2huH2 alexander0derevianko@gmail.com"
+       "ssh-ed25519 AAAA... root@fujin"  # Add the new root key here
+     ];
+   };
+   #+end_src
+
+3. The =./bin/rebuild.sh= script is configured to use remote builds by default. To use local builds instead, use the =--local-build= flag:
+   #+begin_src sh
+   ./bin/rebuild.sh switch --local-build
+   #+end_src
+
 ** Disko Configuration for Proxmox (MBR Boot)
 A critical requirement for ensuring a NixOS VM can boot correctly in Proxmox is the disk partition scheme. Proxmox expects a Master Boot Record (MBR) compatible setup.
 
@@ -316,11 +476,14 @@ nix run github:nix-community/nixos-anywhere -- \
 - [ ] Investigate and fix remaining issues with reverse proxy modules (NGINX, Caddy).
 - [ ] Troubleshoot and fix an issue that occurs when reloading the NixOS configuration remotely, which breaks the SSH pipe and requires entering the root password three times.
 - [ ] Investigate and resolve the issue where updating a user's password declaratively using a secret managed by =sops= failed after the initial installation.
-- [ ] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable.
-- [ ] Create a custom ISO image to streamline the installation process, potentially pre-configuring items like the root user to avoid manual console steps.
+- [X] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable.
+  You can provide drive name when installing with disko and then update disko-config. Example of install command src_bash[:exports code]{nix run github:nix-community/disko#disko-install -- --flake .#fujin-minimal --disk main /dev/nvme0n1}
+- [X] Create a custom ISO image to streamline the installation process, potentially pre-configuring items like the root user to avoid manual console steps.
+  Now you can build izanami iso to for it. Use src_bash[:exports code]{nix build .#izanami-iso}
 - [ ] Develop an automated installation script to handle the post-install process, such as fetching the AGE key and updating sops, based on [[https://unmovedcentre.com/posts/remote-install-nixos-config/#update-sops-file][this guide]].
+- [X] Document remote build setup process and add automation for SSH key exchange between machines.
+  There is now rebuild.sh script that can be used for easy remote build
 
 * Inspiration
 The configuration and structure of this setup were inspired by the following repository:
 - [[https://github.com/notthebee/nix-config][notthebee/nix-config]]
-- [[https://github.com/LichHunter/nixos-dotfiles][LichHunter/nixos-dotfile]] (my old repository, there is still a lot of usefull stuff)
