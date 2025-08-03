@@ -3,5 +3,7 @@
 {
   imports = [
     ./kanshi
+    ./eza
+    ./direnv
   ];
 }

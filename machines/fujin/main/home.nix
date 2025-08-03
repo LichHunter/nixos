@@ -23,6 +23,18 @@
         };
       };
 
+      nu = {
+        enable = true;
+        shellAliases = {
+          ll = "eza -al";
+          cp = "rsync -ah --progress";
+          nixos-build = "nixos-rebuild build --flake ~/nixos/#${username}";
+          nixos-test = "sudo nixos-rebuild test --flake ~/nixos/#${username}";
+          nixos-switch = "sudo nixos-rebuild switch --flake ~/nixos/#${username}";
+          nixos-boot = "sudo nixos-rebuild boot --flake ~/nixos/#${username}";
+        };
+      };
+
       addition.starship.enable = true;
       addition.oxidise.enable = true;
     };

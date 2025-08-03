@@ -10,6 +10,7 @@ in {
     programs.starship = {
       enable = true;
       enableZshIntegration = config.dov.shell.zsh.enable;
+      enableNushellIntegration = config.dov.shell.nu.enable;
       # TODO for now no bash - no integration
       #enableBashIntegration = config.dov.shell.bash.enable;
 
