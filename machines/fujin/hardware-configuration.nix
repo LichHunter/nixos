@@ -4,17 +4,14 @@
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
 
   boot = {
-    loader.grub = {
-      enable = true;
-      useOSProber = true;
-    };
-
+    loader.systemd-boot.enable = true;
     initrd = {
       availableKernelModules =
         [ "nvme" "xhci_pci" "usb_storage" "sd_mod" "sdhci_pci" ];
       kernelModules = [ ];
     };
     kernelModules = [ "kvm-amd" ];
+    kernelPackages = pkgs.linuxPackages_latest;
 
     # allow perf as user | needed for intellij to run profiler
     kernel.sysctl."kernel.perf_event_paranoid" = 1;
@@ -23,8 +20,4 @@
 
   networking.useDHCP = lib.mkDefault true;
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-
-  hardware.nvidia.prime = {
-    amdgpuBusId = lib.mkForce "PCI:7:0:0";
-  };
 }

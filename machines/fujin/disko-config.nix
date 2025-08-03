@@ -4,14 +4,22 @@
   disko.devices = {
     disk = {
       main = {
-        device = "/dev/nvme1n1";
+        device = "/dev/nvme0n1";
         type = "disk";
         content = {
           type = "gpt";
           partitions = {
-            boot = {
-              size = "1M";
-              type = "EF02"; # for grub MBR
+            ESP = {
+              priority = 1;
+              name = "ESP";
+              size = "500M";
+              type = "EF00";
+              content = {
+                type = "filesystem";
+                format = "vfat";
+                mountpoint = "/boot";
+                mountOptions = [ "umask=0077" ];
+              };
             };
             root = {
               size = "100%";

@@ -6,7 +6,7 @@
     ../hardware-configuration.nix
     ../disko-config.nix
 
-    ./sops.nix
+    #./sops.nix
   ];
 
   users.users.${username} = {
@@ -46,6 +46,8 @@
     development.emacs.enable = true;
 
     virtualisation.docker.enable = true;
+
+    window-manager.hypr.enable = true;
   };
 
   ###

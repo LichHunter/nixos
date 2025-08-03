@@ -64,9 +64,6 @@ in {
     nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
   };
 
-  boot.loader.grub.enable = true;
-  boot.loader.grub.useOSProber = true;
-
   time.timeZone = "Europe/Warsaw";
 
   # Select internationalisation properties.

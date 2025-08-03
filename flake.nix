@@ -181,14 +181,14 @@
       fujin-minimal = mkUnstableComputer
         ./machines/fujin/minimal
         [
-          nixos-hardware.nixosModules.omen-15-en0002np
+          nixos-hardware.nixosModules.omen-15-en0010ca
         ] # Extra modules
         "fujin";
 
       fujin = mkUnstableComputer
         ./machines/fujin/main
         [
-          nixos-hardware.nixosModules.omen-15-en0002np
+          nixos-hardware.nixosModules.omen-15-en0010ca
           sops-nix.nixosModules.sops
 
           # Applications
