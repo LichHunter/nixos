@@ -471,10 +471,11 @@ nix run github:nix-community/nixos-anywhere -- \
 #+end_src
 
 * TODOs
-- [ ] Update izanagi to include git by default.
-- [ ] Add NetworkManager to the fujin-minimal configuration.
+- [X] Update izanagi to include git by default.
+- [X] Add NetworkManager to the fujin-minimal configuration.
 - [ ] Investigate and fix remaining issues with reverse proxy modules (NGINX, Caddy).
 - [ ] Troubleshoot and fix an issue that occurs when reloading the NixOS configuration remotely, which breaks the SSH pipe and requires entering the root password three times.
+  Seems like this can be fixed if we allow remote user, for example 'fujin', to execute switch without sudo, but claude gave strange code to implement this. Will need to look into it some time later
 - [ ] Investigate and resolve the issue where updating a user's password declaratively using a secret managed by =sops= failed after the initial installation.
 - [X] Refactor the =disko= configuration to make the disk device name (e.g., =/dev/sda=) a variable. This will avoid hardcoding the value and make the configuration more portable.
   You can provide drive name when installing with disko and then update disko-config. Example of install command src_bash[:exports code]{nix run github:nix-community/disko#disko-install -- --flake .#fujin-minimal --disk main /dev/nvme0n1}

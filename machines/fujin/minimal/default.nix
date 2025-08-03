@@ -15,6 +15,8 @@
     packages = with pkgs; [ ];
   };
 
+  networking.networkmanager.enable = true;
+
   ###
   # Home Manger configuration
   ###

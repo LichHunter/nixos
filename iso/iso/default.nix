@@ -85,7 +85,12 @@ in {
     shell = pkgs.zsh;
   };
 
-  environment.systemPackages = with pkgs; [ vim wget ripgrep ];
+  environment.systemPackages = with pkgs; [
+    vim
+    wget
+    ripgrep
+    git
+  ];
 
   services.openssh = {
     enable = true;
