@@ -3,9 +3,9 @@
 {
   imports = [
     ../../minimal.nix
+
     ../hardware-configuration.nix
     ../disko-config.nix
-
   ];
 
   users.users.${username} = {

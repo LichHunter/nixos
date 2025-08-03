@@ -92,7 +92,7 @@
     };
 
     mkComputer = configurationNix: extraModules: username: inputs.nixpkgs.lib.nixosSystem {
-      specialArgs = { inherit inputs pkgs nixos-hardware extraHomeModules username; };
+      specialArgs = { inherit inputs nixos-hardware extraHomeModules username; };
 
       modules = [
         disko.nixosModules.disko
@@ -103,7 +103,7 @@
     };
 
     mkUnstableComputer = configurationNix: extraModules: username: inputs.unstable.lib.nixosSystem {
-      specialArgs = { inherit inputs upkgs nixos-hardware extraHomeModules username; };
+      specialArgs = { inherit inputs nixos-hardware extraHomeModules username; };
 
       modules = [
         disko.nixosModules.disko
@@ -145,35 +145,22 @@
       ###
       # Proxmox Remote Dev Machine
       ###
-      izanagi-minimal =
-        let
-          username = "izanagi";
-        in nixpkgs.lib.nixosSystem {
-          specialArgs = {inherit inputs outputs extraHomeModules username;};
-          modules = [
-            disko.nixosModules.disko
-            home-manager.nixosModules.home-manager
-            ./machines/izanagi-minimal
-          ];
-        };
-      izanagi =
-        let
-          username = "izanagi";
-        in nixpkgs.lib.nixosSystem {
-          specialArgs = {inherit inputs outputs extraHomeModules username;};
-          modules = [
-            disko.nixosModules.disko
-            home-manager.nixosModules.home-manager
-            sops-nix.nixosModules.sops
+      izanagi-minimal = mkComputer
+        ./machines/izanagi/minimal
+        []
+        "izanagi";
+      izanagi = mkComputer
+        ./machines/izanagi/main
+        [
+          sops-nix.nixosModules.sops
 
-            # Applications
-            inputs.copyparty.nixosModules.default
-            inputs.vscode-server.nixosModules.default
+          # Applications
+          inputs.copyparty.nixosModules.default
+          inputs.vscode-server.nixosModules.default
 
-            ./machines/izanagi
-            ./modules
-          ];
-        };
+          ./modules
+        ]
+        "izanagi";
 
       ###
       # Omen Laptop

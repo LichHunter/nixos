@@ -1,20 +1,13 @@
-{
-  config,
-  pkgs,
-  extraHomeModules,
-  inputs,
-  lib,
-  username,
-  ...
-}:
+{ config, pkgs, extraHomeModules, inputs, lib, username, ... }:
 
 let
   flakeInputs = lib.filterAttrs (_: lib.isType "flake") inputs;
 in {
   imports =
-    [
+    [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./disko-config.nix
+      ./sops.nix
     ];
 
   nixpkgs = {
@@ -38,7 +31,7 @@ in {
       nix-path = config.nix.nixPath;
 
       # Allow user to reubild nixos without sudo
-      trusted-users = [ "root" username ];
+      trusted-users = [ "root" "omen" username ];
     };
     # Opinionated: disable channels
     channel.enable = false;
@@ -49,11 +42,21 @@ in {
   };
 
   # Bootloader.
-  boot.loader.grub.enable = true;
-  boot.loader.grub.useOSProber = true;
+  boot.loader.grub = {
+    enable = true;
+    useOSProber = true;
+  };
 
-  networking.hostName = username;
-  networking.networkmanager.enable = true;
+  networking = {
+    hostName = username;
+    networkmanager.enable = true;
+
+    firewall.allowedTCPPorts = [
+      8080
+      8090 # Mongo express port
+      4200 # Angular application port
+    ];
+  };
 
   # Set your time zone.
   time.timeZone = "Europe/Warsaw";
@@ -81,18 +84,20 @@ in {
     hashedPassword = "$6$fgXNf1aUOgGn7QWQ$rOcVKUnBC7td/KVdyLzknQy4LjgQDETKPIxivi1yWd4boWbRgITr/.iYlekZOuRuC6m.WydgV9PviqlrioDF91";
     extraGroups = [ "networkmanager" "wheel" ];
     packages = with pkgs; [
+      git
     ];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBcGhVpjmWEw1GEw0y/ysJPa2v3+u/Rt/iES/Se2huH2 alexander0derevianko@gmail.com"
+      # This is fujin root user ssh key, it needs to be updated if fujin is reinstalled
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDbNm8WiTyYxEv0Hb9V/E84WH3fiCwWeYG9da8sDaU0V root@nixos"
     ];
-
-    shell = pkgs.zsh;
   };
 
   environment.systemPackages = with pkgs; [
     vim
     wget
     ripgrep
+    direnv
   ];
 
   services.openssh = {
@@ -123,6 +128,26 @@ in {
       imports = [
         ./home.nix
       ] ++ extraHomeModules;
+    };
+  };
+
+  ###
+  # My Services
+  ###
+
+  dov = {
+    virtualisation = {
+      podman.enable = false;
+      docker = {
+        enable = true;
+        isBtrfsStorageDriver = false;
+
+        inherit username;
+      };
+    };
+
+    development = {
+      vscode-server.enable = true;
     };
   };
 
