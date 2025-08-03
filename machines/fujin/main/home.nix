@@ -24,6 +24,7 @@
       };
 
       addition.starship.enable = true;
+      addition.oxidise.enable = true;
     };
 
     browser.zen.enable = true;
