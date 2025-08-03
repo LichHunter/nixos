@@ -52,6 +52,8 @@ in {
         kitty
         jq # used in lock to get language
         wayland-protocols
+        playerctl
+        alsa-utils
 
         #hyprland extensions
         hyprlock
