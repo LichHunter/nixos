@@ -117,30 +117,22 @@
       ###
       # Proxmox Homelab Machine
       ###
-      susano-minimal = nixpkgs.lib.nixosSystem {
-        specialArgs = {inherit inputs outputs extraHomeModules; };
-        modules = [
-          disko.nixosModules.disko
-          home-manager.nixosModules.home-manager
-          ./machines/susano-minimal
-        ];
-      };
-
-      susano = nixpkgs.lib.nixosSystem {
-        specialArgs = {inherit inputs outputs extraHomeModules; };
-        modules = [
-          disko.nixosModules.disko
-          home-manager.nixosModules.home-manager
+      susano-minimal = mkComputer
+        ./machines/susano/minimal
+        []
+        "susano";
+      susano = mkComputer
+        ./machines/susano/main
+        [
           sops-nix.nixosModules.sops
 
           # Applications
           inputs.copyparty.nixosModules.default
           inputs.vscode-server.nixosModules.default
 
-          ./machines/susano
           ./modules
-        ];
-      };
+        ]
+        "susano";
 
       ###
       # Proxmox Remote Dev Machine

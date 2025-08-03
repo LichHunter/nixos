@@ -1,14 +1,14 @@
-{ config, pkgs, extraHomeModules, inputs, lib, ... }:
+{ config, pkgs, extraHomeModules, inputs, lib, username, ... }:
 
 let
-  username = "susano";
   flakeInputs = lib.filterAttrs (_: lib.isType "flake") inputs;
 in {
   imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-      ./disko-config.nix
-      ./sops.nix
+    [
+      ../../minimal.nix
+
+      ../hardware-configuration.nix
+      ../disko-config.nix
     ];
 
   nixpkgs = {
@@ -88,8 +88,6 @@ in {
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBcGhVpjmWEw1GEw0y/ysJPa2v3+u/Rt/iES/Se2huH2 alexander0derevianko@gmail.com"
     ];
-
-    shell = pkgs.zsh;
   };
 
   environment.systemPackages = with pkgs; [
@@ -126,36 +124,6 @@ in {
       imports = [
         ./home.nix
       ] ++ extraHomeModules;
-    };
-  };
-
-  ###
-  # My Services
-  ###
-  dov = {
-    # Reverse Proxy
-    reverse-proxy = {
-      nginx.enable = false; # TODO does not work for some reason
-      traefik.enable = true;
-      caddy.enable = false; # TODO has issues retrieving certificate from duckdns
-    };
-
-    virtualisation = {
-      podman.enable = false;
-      docker.enable = true;
-    };
-
-    social.matrix.enable = false; # TODO does not work :)
-
-    file-server.copyparty.enable = true;
-
-    samba.enable = true;
-
-    searxng.enable = true;
-
-    auth = {
-      authelia.enable = false; # TODO needs configuration with nginx or traefik
-      # ldap.enable = false; # TODO too hard to setup, will need to take a look later
     };
   };
 
