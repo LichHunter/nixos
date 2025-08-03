@@ -46,8 +46,15 @@ This guide documents methods for installing NixOS on a Proxmox virtual machine a
   - [[#method-1-remote-installation-with-nixos-anywhere][Method 1: Remote Installation with nixos-anywhere]]
   - [[#method-2-deployment-via-proxmox-image-template][Method 2: Deployment via Proxmox Image Template]]
 - [[#post-installation-secrets-management][Post-Installation: Secrets Management]]
+  - [[#step-1-generating-the-host-age-key][Step 1: Generating the Host AGE Key]]
+  - [[#step-2-updating-sops-and-re-encrypting-secrets][Step 2: Updating SOPS and Re-encrypting Secrets]]
 - [[#optional-nixos-modules][Optional NixOS Modules]]
+  - [[#reverse-proxies][Reverse Proxies]]
+  - [[#file-servers][File Servers]]
+  - [[#search-engines][Search Engines]]
 - [[#notes-and-configuration-details][Notes and Configuration Details]]
+  - [[#disko-configuration-for-proxmox-mbr-boot][Disko Configuration for Proxmox (MBR Boot)]]
+  - [[#generating-hardware-configuration][Generating Hardware Configuration]]
 - [[#todos][TODOs]]
 - [[#inspiration][Inspiration]]
 
@@ -316,3 +323,4 @@ nix run github:nix-community/nixos-anywhere -- \
 * Inspiration
 The configuration and structure of this setup were inspired by the following repository:
 - [[https://github.com/notthebee/nix-config][notthebee/nix-config]]
+- [[https://github.com/LichHunter/nixos-dotfiles][LichHunter/nixos-dotfile]] (my old repository, there is still a lot of usefull stuff)
