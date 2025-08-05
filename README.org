@@ -484,6 +484,8 @@ nix run github:nix-community/nixos-anywhere -- \
 - [ ] Develop an automated installation script to handle the post-install process, such as fetching the AGE key and updating sops, based on [[https://unmovedcentre.com/posts/remote-install-nixos-config/#update-sops-file][this guide]].
 - [X] Document remote build setup process and add automation for SSH key exchange between machines.
   There is now rebuild.sh script that can be used for easy remote build
+- [ ] Add prometheus for services on Proxmox
+- [ ] Add matrix service in Proxmox
 
 * Inspiration
 The configuration and structure of this setup were inspired by the following repository:

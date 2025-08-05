@@ -56,6 +56,8 @@
         shell = "${pkgs.nushell}/bin/nu";
       };
     };
+
+    development.vscode.enable = true;
   };
 
   programs = {

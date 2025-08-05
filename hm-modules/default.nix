@@ -8,5 +8,6 @@
     ./random
     ./browser
     ./terminal
+    ./development
   ];
 }
