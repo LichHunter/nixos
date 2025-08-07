@@ -57,7 +57,10 @@
       };
     };
 
-    development.vscode.enable = true;
+    development = {
+      vscode.enable = true;
+      jetbrains.toolbox.enable = true;
+    };
   };
 
   programs = {

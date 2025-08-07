@@ -4,7 +4,11 @@
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
 
   boot = {
-    loader.systemd-boot.enable = true;
+    loader = {
+      systemd-boot.enable = true;
+      efi.canTouchEfiVariables = true;
+    };
+
     initrd = {
       availableKernelModules =
         [ "nvme" "xhci_pci" "usb_storage" "sd_mod" "sdhci_pci" ];

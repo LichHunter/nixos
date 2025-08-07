@@ -15,5 +15,7 @@
   "screencastMode.fontSize": 64.0,
   "terminal.integrated.fontSize": 16.0,
   "workbench.colorTheme": "Stylix",
-  "redhat.telemetry.enabled": true
+  "redhat.telemetry.enabled": true,
+  "database-client.autoSync": true,
+  "git.confirmSync": false
 }

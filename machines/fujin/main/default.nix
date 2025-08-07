@@ -35,7 +35,17 @@
     };
   };
 
-  networking.networkmanager.enable = true;
+  networking = {
+    nameservers = [
+      "192.168.1.2" # PyHole
+      "192.168.1.1" # Router
+      "1.1.1.1"
+    ];
+    dhcpcd.extraConfig = ''
+      nohook resolv.conf
+    '';
+    networkmanager.enable = true;
+  };
 
   ###
   # Thunar configurations

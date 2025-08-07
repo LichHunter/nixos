@@ -54,6 +54,7 @@ in {
         wayland-protocols
         playerctl
         alsa-utils
+        brightnessctl
 
         #hyprland extensions
         hyprlock
