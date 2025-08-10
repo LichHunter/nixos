@@ -20,6 +20,8 @@
       # Stow, to manage my doom emacs configs
       stow
     ];
+
+    shell = lib.mkDefault pkgs.nushell;
   };
 
   programs = {
@@ -56,6 +58,8 @@
   services.tumbler.enable = true; # Thumbnail support for images
   ###
   ###
+
+  services.tailscale.enable = true;
 
   dov = {
     development.emacs.enable = true;

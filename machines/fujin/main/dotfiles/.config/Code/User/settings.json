@@ -17,5 +17,12 @@
   "workbench.colorTheme": "Stylix",
   "redhat.telemetry.enabled": true,
   "database-client.autoSync": true,
-  "git.confirmSync": false
+  "git.confirmSync": false,
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-21",
+      "path": "/home/fujin/jdk/openjdk21",
+      "default": true,
+    },
+  ]
 }

@@ -50,3 +50,9 @@
 ;(unpin! t)
 
 ;;(package! mu4e :pin "b36e492")
+
+(package! claude-code-ide
+  :recipe (:type git :host github :repo "manzaltu/claude-code-ide.el"))
+(package! web-server)
+
+(package! just-mode)

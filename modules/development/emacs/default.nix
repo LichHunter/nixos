@@ -14,7 +14,6 @@ in {
     ];
 
     users.users."${username}" = {
-
       packages = with pkgs; [
         ## Emacs itself
         binutils # native-comp needs 'as', provided by this
@@ -72,8 +71,9 @@ in {
 
         isync # mu4e related
       ];
-
     };
+
+    services.lorri.enable = true; # will cache nix builds and speed up direnv tremendously:
   };
 
 }

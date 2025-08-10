@@ -17,6 +17,7 @@ in {
     home.packages = with pkgs; [
       maven
       nodejs_22
+      jdk21
     ];
 
     home.file."jdk/openjdk11".source = pkgs.jdk11;
@@ -32,7 +33,7 @@ in {
       };
 
       nu = {
-        shellAliases = aliases;
+        #shellAliases = aliases;
       };
     };
   };

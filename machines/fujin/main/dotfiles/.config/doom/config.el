@@ -243,3 +243,9 @@
   :hook (nix-mode . lsp-deferred)
   :ensure t)
   )
+
+(after! claude-code-ide
+  (use-package claude-code-ide
+    :bind ("C-c C-'" . claude-code-ide-menu) ; Set your favorite keybinding
+    :config
+    (claude-code-ide-emacs-tools-setup))) ; Optionally enable Emacs MCP tools
