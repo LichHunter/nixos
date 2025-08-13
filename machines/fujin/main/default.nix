@@ -21,7 +21,7 @@
       stow
     ];
 
-    shell = lib.mkDefault pkgs.nushell;
+    shell = lib.mkForce pkgs.nushell;
   };
 
   programs = {

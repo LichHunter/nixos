@@ -14,15 +14,9 @@
   "scm.inputFontSize": 14.857142857142858,
   "screencastMode.fontSize": 64.0,
   "terminal.integrated.fontSize": 16.0,
-  "workbench.colorTheme": "Stylix",
-  "redhat.telemetry.enabled": true,
+  "redhat.telemetry.enabled": false,
   "database-client.autoSync": true,
   "git.confirmSync": false,
-  "java.configuration.runtimes": [
-    {
-      "name": "JavaSE-21",
-      "path": "/home/fujin/jdk/openjdk21",
-      "default": true,
-    },
-  ]
+  "java.jdt.ls.java.home": "/home/fujin/jdk/openjdk21",
+  "java.configuration.detectJdksAtStart": false
 }

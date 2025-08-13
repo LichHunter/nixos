@@ -157,7 +157,18 @@
                      :major-modes '(nix-mode)
                      :priority 0
                      :server-id 'nixd))
-  )
+  (defun my/setup-project-lombok ()
+    (when (and (boundp 'lombok-version) lombok-version)
+      (let ((lombok-jar (expand-file-name
+                         (format "~/.m2/repository/org/projectlombok/lombok/%s/lombok-%s.jar"
+                                 lombok-version lombok-version))))
+        (when (file-exists-p lombok-jar)
+          (setq-local lsp-java-vmargs
+                      (append (default-value 'lsp-java-vmargs)
+                              (list (concat "-javaagent:" lombok-jar))))))))
+
+  (add-hook 'java-mode-hook #'my/setup-project-lombok))
+  
 
 (add-to-list 'safe-local-variable-values #'stringp)
 (advice-add 'risky-local-variable-p :override #'ignore)

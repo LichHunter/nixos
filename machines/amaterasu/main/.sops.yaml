@@ -1,0 +1,9 @@
+keys:
+  - &primary age19wvqtn4ju6k4vs8fxr34unl6xx4cv04jw0lx9ps20xlde927zfssgl4qke
+  - &amaterasu age13mu9pxlnmmeexwpkyqs4g9kgmyv8dfe5udzlk0dn6j3u8ad7necqm7rsq8
+creation_rules:
+  - path_regex: secrets/secrets.yaml$
+    key_groups:
+      - age:
+          - *primary
+          - *amaterasu

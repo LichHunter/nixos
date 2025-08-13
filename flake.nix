@@ -155,6 +155,26 @@
         "izanagi";
 
       ###
+      # Proxmox CI/CD
+      ###
+      amaterasu-minimal = mkComputer
+        ./machines/amaterasu/minimal
+        []
+        "amaterasu";
+      amaterasu = mkComputer
+        ./machines/amaterasu/main
+        [
+          sops-nix.nixosModules.sops
+
+          # Applications
+          inputs.copyparty.nixosModules.default
+          inputs.vscode-server.nixosModules.default
+
+          ./modules
+        ]
+        "amaterasu";
+
+      ###
       # Omen Laptop
       ###
       fujin-minimal = mkUnstableComputer
