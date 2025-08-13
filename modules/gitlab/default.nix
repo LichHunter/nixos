@@ -7,83 +7,74 @@ let
   owner = config.services.gitlab.user;
   group = config.services.gitlab.group;
   domain = "susano-lab.duckdns.org";
+  gitlabDomain = "gitlab.${domain}";
 in {
   options.dov.gitlab = { enable = mkEnableOption "gitlab config"; };
 
   config = mkIf cfg.enable {
     sops.secrets = {
-      "gitlab/databasePassword" = {
-        inherit owner group;
-      };
-      "gitlab/initialRootPassword" = {
-        inherit owner group;
-      };
-      "gitlab/secret" = {
-        inherit owner group;
-      };
-      "gitlab/otp" = {
-        inherit owner group;
-      };
-      "gitlab/db" = {
-        inherit owner group;
-      };
-      "gitlab/jwt" = {
-        inherit owner group;
-      };
-      "gitlab/activeRecordPrimaryKey" = {
-        inherit owner group;
-      };
-      "gitlab/activeRecordDeterministicKey" = {
-        inherit owner group;
-      };
-      "gitlab/activeRecordSalt" = {
-        inherit owner group;
-      };
-      "gitlab/oauth/secret" = {
-        inherit owner group;
-      };
+      "gitlab/databasePassword" = { inherit owner group; };
+      "gitlab/initialRootPassword" = { inherit owner group; };
+      "gitlab/secret" = { inherit owner group; };
+      "gitlab/otp" = { inherit owner group; };
+      "gitlab/db" = { inherit owner group; };
+      "gitlab/jwt" = { inherit owner group; };
+      "gitlab/activeRecordPrimaryKey" = { inherit owner group; };
+      "gitlab/activeRecordDeterministicKey" = { inherit owner group; };
+      "gitlab/activeRecordSalt" = { inherit owner group; };
+      "gitlab/oauth/secret" = { inherit owner group; };
     };
 
-    services.gitlab = {
-      enable = cfg.enable;
-      databasePasswordFile = config.sops.secrets."gitlab/databasePassword".path;
-      initialRootPasswordFile = config.sops.secrets."gitlab/initialRootPassword".path;
-      secrets = {
-        secretFile = config.sops.secrets."gitlab/secret".path;
-        otpFile = config.sops.secrets."gitlab/otp".path;
-        dbFile = config.sops.secrets."gitlab/db".path;
-        jwsFile = config.sops.secrets."gitlab/jwt".path;
-        activeRecordPrimaryKeyFile = config.sops.secrets."gitlab/activeRecordPrimaryKey".path;
-        activeRecordDeterministicKeyFile = config.sops.secrets."gitlab/activeRecordDeterministicKey".path;
-        activeRecordSaltFile = config.sops.secrets."gitlab/activeRecordSalt".path;
-      };
-      extraConfig = {
-        # GitLab-specific configuration
-        gitlab = {
-          default_projects_features = {
-            builds = true;
-          };
+    services = {
+      gitlab = {
+        enable = cfg.enable;
+        databasePasswordFile =
+          config.sops.secrets."gitlab/databasePassword".path;
+        initialRootPasswordFile =
+          config.sops.secrets."gitlab/initialRootPassword".path;
+        secrets = {
+          secretFile = config.sops.secrets."gitlab/secret".path;
+          otpFile = config.sops.secrets."gitlab/otp".path;
+          dbFile = config.sops.secrets."gitlab/db".path;
+          jwsFile = config.sops.secrets."gitlab/jwt".path;
+          activeRecordPrimaryKeyFile =
+            config.sops.secrets."gitlab/activeRecordPrimaryKey".path;
+          activeRecordDeterministicKeyFile =
+            config.sops.secrets."gitlab/activeRecordDeterministicKey".path;
+          activeRecordSaltFile =
+            config.sops.secrets."gitlab/activeRecordSalt".path;
         };
+        extraConfig = {
+          # GitLab-specific configuration
+          gitlab = { default_projects_features = { builds = true; }; };
 
-        # OmniAuth configuration (direct, not under gitlab_rails)
-        omniauth = {
-          enabled = true;
-          allow_single_sign_on = ["openid_connect"];
-          sync_email_from_provider = "openid_connect";
-          sync_profile_from_provider = ["openid_connect"];
-          sync_profile_attributes = ["email"];
-          # Enable if want to auto login with sso
-          #auto_sign_in_with_provider = "openid_connect";
-          block_auto_created_users = true;
-          auto_link_user = ["openid_connect"];
+          # Configure GitLab to trust our nginx proxy and set external URL
+          gitlab_rails = {
+            trusted_proxies = [ "127.0.0.1" "::1" ];
+            # Force GitLab to use the correct external URL for generating links
+            gitlab_host = gitlabDomain;
+            gitlab_port = 443;
+            gitlab_https = true;
+          };
 
-          providers = [
-            {
+          # OmniAuth configuration (direct, not under gitlab_rails)
+          omniauth = {
+            enabled = true;
+            allow_single_sign_on = [ "openid_connect" ];
+            sync_email_from_provider = "openid_connect";
+            sync_profile_from_provider = [ "openid_connect" ];
+            sync_profile_attributes = [ "email" ];
+            # Enable if want to auto login with sso
+            #auto_sign_in_with_provider = "openid_connect";
+            block_auto_created_users = true;
+            auto_link_user = [ "openid_connect" ];
+
+            providers = [{
               name = "openid_connect";
               label = "My Company OIDC Login";
               args = {
                 name = "openid_connect";
-                scope = ["openid" "profile" "email"];
+                scope = [ "openid" "profile" "email" ];
                 response_type = "code";
                 issuer = "https://authentik.${domain}/application/o/gitlab/";
                 discovery = true;
@@ -94,12 +85,14 @@ in {
                 client_options = {
                   # For production, use secret management with _secret attribute
                   identifier = "QoAaWAv7TSaRFeLahVLs4mugeXpaJ0WWYIUIXhWk";
-                  secret._secret = config.sops.secrets."gitlab/oauth/secret".path;
-                  redirect_uri = "https://gitlab.${domain}/users/auth/openid_connect/callback";
+                  secret._secret =
+                    config.sops.secrets."gitlab/oauth/secret".path;
+                  redirect_uri =
+                    "https://gitlab.${domain}/users/auth/openid_connect/callback";
                 };
               };
-            }
-          ];
+            }];
+          };
         };
       };
     };
@@ -120,7 +113,7 @@ in {
 
     networking.firewall = {
       enable = cfg.enable;
-      allowedTCPPorts = [ 80 443 ];  # HTTP and HTTPS
+      allowedTCPPorts = [ 80 443 ]; # HTTP and HTTPS
     };
 
     services.openssh.enable = cfg.enable;

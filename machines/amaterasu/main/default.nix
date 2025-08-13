@@ -126,7 +126,7 @@ in {
   ###
   dov = {
     gitlab.enable = true;
-    jenkins.enable = true;
+    jenkins.enable = false; # will migrate to gitlab runner
   };
 
   # DO NOT CHANGE AT ANY POINT!
