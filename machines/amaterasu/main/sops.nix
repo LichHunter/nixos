@@ -12,7 +12,5 @@
       generateKey = true;
       # This is the actual specification of the secrets.
     };
-
-    secrets = { };
   };
 }

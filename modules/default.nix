@@ -12,5 +12,6 @@
     ./development
     ./window-manager
     ./display-manager
+    ./gitlab
   ];
 }

@@ -125,6 +125,7 @@ in {
   # My Services
   ###
   dov = {
+    gitlab.enable = true;
   };
 
   # DO NOT CHANGE AT ANY POINT!
