@@ -28,6 +28,10 @@ in {
     services = {
       gitlab = {
         enable = cfg.enable;
+        host = "gitlab.susano-lab.duckdns.org"; # Must be your external domain
+        port = 443; # External port users access
+        https = true; # Enable since external access is HTTPS
+
         databasePasswordFile =
           config.sops.secrets."gitlab/databasePassword".path;
         initialRootPasswordFile =
@@ -45,17 +49,13 @@ in {
             config.sops.secrets."gitlab/activeRecordSalt".path;
         };
         extraConfig = {
-          # GitLab-specific configuration
-          gitlab = { default_projects_features = { builds = true; }; };
-
-          # Configure GitLab to trust our nginx proxy and set external URL
+          # CRITICAL: External URL must match what users type in browser
+          external_url = "https://gitlab.susano-lab.duckdns.org";
           gitlab_rails = {
-            trusted_proxies = [ "127.0.0.1" "::1" ];
-            # Force GitLab to use the correct external URL for generating links
-            gitlab_host = gitlabDomain;
-            gitlab_port = 443;
-            gitlab_https = true;
+            trusted_proxies = [ "127.0.0.1" "::1" "192.168.1.0/24" ];
+            internal_api_url = "https://gitlab.susano-lab.duckdns.org";
           };
+          nginx.enable = false; # Disable bundled nginx
 
           # OmniAuth configuration (direct, not under gitlab_rails)
           omniauth = {
