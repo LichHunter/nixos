@@ -45,7 +45,7 @@ in {
     };
 
     services.gitlab = {
-      enable = true;
+      enable = cfg.enable;
       databasePasswordFile = config.sops.secrets."gitlab/databasePassword".path;
       initialRootPasswordFile = config.sops.secrets."gitlab/initialRootPassword".path;
       secrets = {
@@ -105,7 +105,7 @@ in {
     };
 
     services.nginx = {
-      enable = true;
+      enable = cfg.enable;
       recommendedProxySettings = true;
 
       virtualHosts = {
@@ -119,11 +119,11 @@ in {
     };
 
     networking.firewall = {
-      enable = true;
+      enable = cfg.enable;
       allowedTCPPorts = [ 80 443 ];  # HTTP and HTTPS
     };
 
-    services.openssh.enable = true;
+    services.openssh.enable = cfg.enable;
 
     systemd.services.gitlab-backup.environment.BACKUP = "dump";
   };

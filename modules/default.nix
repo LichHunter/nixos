@@ -13,5 +13,6 @@
     ./window-manager
     ./display-manager
     ./gitlab
+    ./jenkins
   ];
 }

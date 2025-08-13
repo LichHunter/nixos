@@ -126,6 +126,7 @@ in {
   ###
   dov = {
     gitlab.enable = true;
+    jenkins.enable = true;
   };
 
   # DO NOT CHANGE AT ANY POINT!
