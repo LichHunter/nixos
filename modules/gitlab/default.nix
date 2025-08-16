@@ -106,6 +106,66 @@ in {
         localhost = {
           locations."/" = {
             proxyPass = "http://unix:/run/gitlab/gitlab-workhorse.socket";
+            extraConfig = ''
+              # Remove max size to allow gitlab transfer and accept big files from runners
+              client_max_body_size 0;
+
+              # Disable proxy buffering for GitLab real-time features
+              proxy_buffering off;
+              proxy_request_buffering off;
+
+              # Additional timeout settings
+              proxy_read_timeout 300;
+              proxy_connect_timeout 300;
+              proxy_send_timeout 300;
+
+              # GitLab-specific headers
+              proxy_set_header X-GitLab-External-Url https://gitlab.susano-lab.duckdns.org;
+
+              # WebSocket support
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection $connection_upgrade;
+
+              # Workhorse acceleration
+              proxy_set_header X-Sendfile-Type X-Accel-Redirect;
+              proxy_set_header X-Accel-Mapping /var/opt/gitlab/=/gitlab-accel/;
+            '';
+          };
+          # Git HTTP endpoints
+          locations."~ ^/[\\w\\.-]+/[\\w\\.-]+/git-(receive|upload)-pack$" = {
+            proxyPass = "http://unix:/run/gitlab/gitlab-workhorse.socket";
+            extraConfig = ''
+              client_max_body_size 0;
+              proxy_buffering off;
+              proxy_request_buffering off;
+            '';
+          };
+
+          # API large file support
+          locations."~ ^/api/v\\d+/projects/.*/repository/files" = {
+            proxyPass = "http://unix:/run/gitlab/gitlab-workhorse.socket";
+            extraConfig = ''
+              client_max_body_size 0;
+            '';
+          };
+
+          # LFS support
+          locations."~ ^/[\\w\\.-]+/[\\w\\.-]+/gitlab-lfs/objects" = {
+            proxyPass = "http://unix:/run/gitlab/gitlab-workhorse.socket";
+            extraConfig = ''
+              client_max_body_size 0;
+            '';
+          };
+
+          # CI artifacts
+          locations."~ ^/[\\w\\.-]+/[\\w\\.-]+/-/jobs/\\d+/artifacts" = {
+            proxyPass = "http://unix:/run/gitlab/gitlab-workhorse.socket";
+            extraConfig = ''
+              client_max_body_size 0;
+              proxy_buffering off;
+              proxy_request_buffering off;
+            '';
           };
         };
       };
