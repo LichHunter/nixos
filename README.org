@@ -71,6 +71,7 @@ This guide documents methods for installing NixOS on a Proxmox virtual machine a
   - [[#generating-hardware-configuration][Generating Hardware Configuration]]
 - [[#todos][TODOs]]
 - [[#inspiration][Inspiration]]
+- [[#links][Links]]
 
 * Fujin Installation (Bare Metal)
 ** Boot Drive Installation
@@ -490,3 +491,5 @@ nix run github:nix-community/nixos-anywhere -- \
 * Inspiration
 The configuration and structure of this setup were inspired by the following repository:
 - [[https://github.com/notthebee/nix-config][notthebee/nix-config]]
+* Links
+- [[https://github.com/Jacksaur/Gorgeous-GRUB][grub-themes]]

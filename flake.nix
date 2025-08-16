@@ -65,6 +65,8 @@
     };
 
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
+
+    minegrub-theme.url = "github:Lxtharia/minegrub-theme";
   };
 
   outputs = {
@@ -195,6 +197,7 @@
           inputs.vscode-server.nixosModules.default
           inputs.stylix.nixosModules.stylix
           inputs.nix-ld.nixosModules.nix-ld
+          inputs.minegrub-theme.nixosModules.default
 
           ./modules
         ] # Extra modules

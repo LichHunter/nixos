@@ -18,5 +18,6 @@
   "database-client.autoSync": true,
   "git.confirmSync": false,
   "java.jdt.ls.java.home": "/home/fujin/jdk/openjdk21",
-  "java.configuration.detectJdksAtStart": false
+  "java.configuration.detectJdksAtStart": false,
+  "workbench.colorTheme": "Visual Studio Dark"
 }
