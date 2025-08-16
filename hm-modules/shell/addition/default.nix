@@ -4,5 +4,6 @@
   imports = [
     ./starship
     ./oxidise
+    ./tmux
   ];
 }

@@ -35,8 +35,11 @@
         };
       };
 
-      addition.starship.enable = true;
-      addition.oxidise.enable = true;
+      addition = {
+        starship.enable = true;
+        oxidise.enable = true;
+        tmux.enable = true;
+      };
     };
 
     browser.zen.enable = true;
