@@ -88,6 +88,7 @@ in {
     vim
     wget
     ripgrep
+    vault
   ];
 
   services.openssh = {

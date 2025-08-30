@@ -5,5 +5,6 @@
     ./starship
     ./oxidise
     ./tmux
+    ./fzf
   ];
 }

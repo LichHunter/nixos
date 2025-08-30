@@ -39,6 +39,7 @@
         starship.enable = true;
         oxidise.enable = true;
         tmux.enable = true;
+        fzf.enable = true;
       };
     };
 

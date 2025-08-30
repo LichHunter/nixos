@@ -19,5 +19,6 @@
   "git.confirmSync": false,
   "java.jdt.ls.java.home": "/home/fujin/jdk/openjdk21",
   "java.configuration.detectJdksAtStart": false,
-  "workbench.colorTheme": "Visual Studio Dark"
+  "workbench.colorTheme": "Visual Studio Dark",
+  "diffEditor.ignoreTrimWhitespace": true
 }
