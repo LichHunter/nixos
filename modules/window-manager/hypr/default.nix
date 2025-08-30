@@ -234,8 +234,6 @@ in {
 
           master = { new_status = "master"; };
 
-          gestures = { workspace_swipe = false; };
-
           workspace = [
             #"0, monitor:DP-1"
             "8, monitor:e-DP-1"
