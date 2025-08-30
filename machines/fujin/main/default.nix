@@ -19,6 +19,11 @@
 
       # Stow, to manage my doom emacs configs
       stow
+
+      # split keyboard configuration managers
+      vial
+      via
+      qmk
     ];
 
     shell = lib.mkForce pkgs.nushell;
@@ -69,6 +74,19 @@
   ###
 
   services.tailscale.enable = true;
+
+  # Keyboard configuraions
+  services.udev = {
+
+    packages = with pkgs; [
+      qmk
+      qmk-udev-rules # the only relevant
+      qmk_hid
+      via
+      vial
+    ]; # packages
+
+  }; # udev
 
   dov = {
     development.emacs.enable = true;
