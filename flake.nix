@@ -250,11 +250,6 @@
       "x86_64-linux" = {
         default = upkgs.mkShell {
           buildInputs = with upkgs; [
-
-            # AI Coding agents
-            gemini-cli
-            opencode
-            claude-code
           ];
 
           shellHook = ''
