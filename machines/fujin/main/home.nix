@@ -110,6 +110,10 @@
     devpod
     tmux
     bottles
+    terraform
+    kubectl
+    kubectx
+    ansible
 
     #torrent
     qbittorrent
