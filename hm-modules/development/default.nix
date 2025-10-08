@@ -26,6 +26,7 @@ in {
     home.file."jdk/openjdk23".source = pkgs.jdk23;
     home.file."nodejs/nodejs_22".source = pkgs.nodejs_22;
     home.file."python/python3".source = pkgs.python3;
+    home.file."jdk/zulujdk22".source = pkgs.zulu22;
 
     dov.shell = {
       zsh = {

@@ -9,6 +9,10 @@
     #./sops.nix
   ];
 
+  nixpkgs.overlays = [
+    (import ./overlays/zulu22.nix)
+  ];
+
   users.users.${username} = {
     description = "NixOS Omen Laptop";
     hashedPassword =
