@@ -95,8 +95,8 @@
 
     # social
     telegram-desktop
-    thunderbird-latest
-    element-desktop
+    #thunderbird-latest
+    #element-desktop
     #teams-for-linux
     #webcord
     discord
@@ -137,6 +137,9 @@
     #mpd
     #mpv
     #mpc-cli
+
+    # gaming
+    prismlauncher
   ];
 
   stylix = {
