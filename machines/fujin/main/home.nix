@@ -72,10 +72,12 @@
 
     git = {
       enable = true;
-      userName = "Alexander";
-      userEmail = "alexander0derevianko@gmail.com";
+      settings = {
+        user = {
+          name = "Alexander";
+          email = "alexander0derevianko@gmail.com";
+        };
 
-      extraConfig = {
         safe = {
           directory = ["/home/${username}/nixos-dotfiles" "/home/${username}/.cache/nix"];
         };
