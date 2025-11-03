@@ -135,7 +135,7 @@
       };
 
       emoji = {
-        package = pkgs.noto-fonts-emoji;
+        package = pkgs.noto-fonts-color-emoji;
         name = "Noto Color Emoji";
       };
     };
@@ -145,7 +145,7 @@
     [
       noto-fonts
       noto-fonts-cjk-sans
-      noto-fonts-emoji
+      noto-fonts-color-emoji
       liberation_ttf
       fira-code
       fira
@@ -154,7 +154,7 @@
       dina-font
       proggyfonts
       emacs-all-the-icons-fonts
-      emacsPackages.all-the-icons
+      emacs.pkgs.all-the-icons
       font-awesome_5
       source-code-pro
     ] ++ builtins.filter lib.attrsets.isDerivation
