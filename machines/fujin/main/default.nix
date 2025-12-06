@@ -13,6 +13,8 @@
     (import ./overlays/zulu22.nix)
   ];
 
+  security.pki.certificateFiles = [ ./certs/homelab-com.pem ];
+
   users.users.${username} = {
     description = "NixOS Omen Laptop";
     hashedPassword =
@@ -32,6 +34,11 @@
 
     shell = lib.mkForce pkgs.nushell;
   };
+
+  virtualisation.virtualbox.host.enable = true;
+  virtualisation.virtualbox.guest.enable = true;
+  virtualisation.virtualbox.guest.dragAndDrop = true;
+  users.extraGroups.vboxusers.members = [ "${username}" ];
 
   programs = {
     nix-ld.dev.enable = true;
