@@ -21,7 +21,7 @@
       "$6$5xuxfP8HapkkyDa5$qr2wkpibMaNSIiJIPojWC4CO1X31HNJZEfmYfReYrwOSoflf0rMrQk.EZj5uzh/K/NalQMnCiDcmvFBuf9a5p0";
     packages = with pkgs; [
       # thunar plugin to manager archives
-      xfce.thunar-archive-plugin
+      thunar-archive-plugin
 
       # Stow, to manage my doom emacs configs
       stow

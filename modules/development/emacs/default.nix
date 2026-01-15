@@ -47,7 +47,7 @@ in {
         # :lang latex & :lang org (latex previews)
         texlive.combined.scheme-medium
         # :lang nix
-        nixfmt-classic
+        nixfmt
         #nixd
         nil
         # :lang lisp

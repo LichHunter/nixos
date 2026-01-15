@@ -104,7 +104,7 @@
     discord
 
     # development
-    jetbrains.idea-ultimate
+    jetbrains.idea
     jetbrains.webstorm
     #jetbrains.pycharm-community-src
     direnv

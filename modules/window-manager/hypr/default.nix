@@ -241,14 +241,9 @@ in {
             #"9, on-created-empty:[tiled] thunderbird"
           ];
 
-          windowrulev2 = [
-            "workspace 9, class:^(.*thunderbird.*)$"
-            "group, class:^(.*thunderbird.*)$"
-            "workspace 9, class:^(.*Element.*)$"
-            "group, class:^(.*Element.*)$"
-            "workspace 8, title:^(.*KeePassXC.*)$"
-            "float, class:^(.*steam.*)$"
-            "noinitialfocus,class:(jetbrains-)(.*),title:^win(.*), initialTitle:win.*, floating:1"
+          windowrule = [
+            "workspace 8, match:title ^(.*KeePassXC.*)$"
+            #"noinitialfocus,match:class (jetbrains-)(.*),title:^win(.*), initialTitle:win.*, floating:1"
           ];
         };
       };
