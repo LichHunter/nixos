@@ -52,7 +52,6 @@
 
     hyprland = {
       url = "git+https://github.com/hyprwm/Hyprland";
-      inputs.nixpkgs.follows = "unstable";
     };
 
     hyprland-plugins = {
