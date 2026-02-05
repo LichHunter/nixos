@@ -1,15 +1,23 @@
-{ config, pkgs, extraHomeModules, inputs, lib, username, ... }:
+{
+  config,
+  pkgs,
+  extraHomeModules,
+  inputs,
+  lib,
+  username,
+  ...
+}:
 
 let
   flakeInputs = lib.filterAttrs (_: lib.isType "flake") inputs;
-in {
-  imports =
-    [
-      ../../minimal.nix
+in
+{
+  imports = [
+    ../../minimal.nix
 
-      ../hardware-configuration.nix
-      ../disko-config.nix
-    ];
+    ../hardware-configuration.nix
+    ../disko-config.nix
+  ];
 
   nixpkgs = {
     # You can add overlays here
@@ -41,13 +49,16 @@ in {
       nix-path = config.nix.nixPath;
 
       # Allow user to reubild nixos without sudo
-      trusted-users = [ "root" username ];
+      trusted-users = [
+        "root"
+        username
+      ];
     };
     # Opinionated: disable channels
     channel.enable = false;
 
     # Opinionated: make flake registry and nix path match flake inputs
-    registry = lib.mapAttrs (_: flake: {inherit flake;}) flakeInputs;
+    registry = lib.mkForce (lib.mapAttrs (_: flake: { inherit flake; }) flakeInputs);
     nixPath = lib.mapAttrsToList (n: _: "${n}=flake:${n}") flakeInputs;
   };
 
@@ -82,7 +93,10 @@ in {
     isNormalUser = true;
     description = "NixOS Proxmox Homelab";
     hashedPassword = "$6$7LSgOtcEozV0gkN9$pCltKL683UqJ3M7C4ZIgZsytAGtQS375g64ckuJQPFtUjxiGCxehJtkP91Pba.rIZNe3eZqnJfIQNwnJWmyVJ0";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+    ];
     packages = with pkgs; [
     ];
     openssh.authorizedKeys.keys = [
@@ -118,12 +132,13 @@ in {
     useGlobalPkgs = true;
     useUserPackages = true;
     backupFileExtension = "backup";
-    extraSpecialArgs = { inherit inputs; };
+    extraSpecialArgs = { inherit inputs username; };
 
     users."${username}" = {
       imports = [
         ./home.nix
-      ] ++ extraHomeModules;
+      ]
+      ++ extraHomeModules;
     };
   };
 

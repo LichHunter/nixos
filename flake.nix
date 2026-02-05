@@ -119,11 +119,11 @@
       ###
       # Proxmox Homelab Machine
       ###
-      susano-minimal = mkComputer
+      susano-minimal = mkUnstableComputer
         ./machines/susano/minimal
         []
         "susano";
-      susano = mkComputer
+      susano = mkUnstableComputer
         ./machines/susano/main
         [
           sops-nix.nixosModules.sops
@@ -250,6 +250,7 @@
       "x86_64-linux" = {
         default = upkgs.mkShell {
           buildInputs = with upkgs; [
+            opencode
           ];
 
           shellHook = ''
