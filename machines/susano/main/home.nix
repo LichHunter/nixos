@@ -11,6 +11,11 @@ in {
     stateVersion = "25.05";
     username = username;
     homeDirectory = "/home/${username}";
+
+    packages = with pkgs; [
+      eza
+      git
+    ];
   };
 
   dov = {
@@ -28,8 +33,4 @@ in {
   };
 
   programs.home-manager.enable = true;
-
-  home.packages = with pkgs; [
-    eza
-  ];
 }
