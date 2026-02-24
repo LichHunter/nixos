@@ -35,10 +35,10 @@
     shell = lib.mkForce pkgs.nushell;
   };
 
-  virtualisation.virtualbox.host.enable = true;
-  virtualisation.virtualbox.guest.enable = true;
-  virtualisation.virtualbox.guest.dragAndDrop = true;
-  users.extraGroups.vboxusers.members = [ "${username}" ];
+  # virtualisation.virtualbox.host.enable = true;
+  # virtualisation.virtualbox.guest.enable = true;
+  # virtualisation.virtualbox.guest.dragAndDrop = true;
+  # users.extraGroups.vboxusers.members = [ "${username}" ];
 
   programs = {
     nix-ld.dev.enable = true;
