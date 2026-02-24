@@ -161,7 +161,7 @@ in
 
     social.matrix.enable = false; # TODO does not work :)
 
-    file-server.copyparty.enable = true;
+    file-server.copyparty.enable = false;
 
     samba.enable = true;
 
