@@ -124,6 +124,11 @@ in
 
   programs = {
     zsh.enable = true;
+
+    gnupg.agent = {
+      enable = true;
+      enableSSHSupport = true;
+    };
   };
 
   ###
@@ -147,6 +152,8 @@ in
   # My Services
   ###
   dov = {
+    development.emacs.enable = true;
+
     # Reverse Proxy
     reverse-proxy = {
       nginx.enable = false; # TODO does not work for some reason
