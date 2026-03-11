@@ -1,4 +1,10 @@
-{ config, lib, pkgs, modulesPath, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  modulesPath,
+  ...
+}:
 
 {
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
@@ -10,8 +16,13 @@
     };
 
     initrd = {
-      availableKernelModules =
-        [ "nvme" "xhci_pci" "usb_storage" "sd_mod" "sdhci_pci" ];
+      availableKernelModules = [
+        "nvme"
+        "xhci_pci"
+        "usb_storage"
+        "sd_mod"
+        "sdhci_pci"
+      ];
       kernelModules = [ ];
     };
     kernelModules = [ "kvm-amd" ];
@@ -24,4 +35,11 @@
 
   networking.useDHCP = lib.mkDefault true;
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+
+  hardware = {
+    bluetooth.enable = true;
+    bluetooth.powerOnBoot = true;
+    nvidia.modesetting.enable = true;
+    nvidia.open = true;
+  };
 }

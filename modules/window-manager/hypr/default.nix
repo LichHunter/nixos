@@ -105,7 +105,7 @@ in {
             "$mainMod, G, fullscreen,"
             "$mainMod, t, togglegroup"
             "$mainMod, v, togglefloating"
-            "$mainMod, s, togglesplit"
+            #"$mainMod, s, togglesplit" # invalid dispatcher, requested "togglesplit" does not exist
 
             #bind = $mainMod, RETURN, exec, kitty
             "$mainMod, RETURN, exec, alacritty"

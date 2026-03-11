@@ -116,6 +116,9 @@
     kubectl
     kubectx
     ansible
+    btop
+    htop
+    nvitop
 
     #torrent
     qbittorrent
@@ -126,6 +129,7 @@
     #virt-manager
     #vial #keyboard configurator
     #qmk
+    google-chrome
 
     #libreoffice
     grim

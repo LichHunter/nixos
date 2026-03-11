@@ -43,8 +43,6 @@
   programs = {
     nix-ld.dev.enable = true;
 
-    light.enable = true;
-
     nm-applet.enable = true;
 
     gnupg.agent = {
