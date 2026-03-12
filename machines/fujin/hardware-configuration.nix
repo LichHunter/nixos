@@ -39,6 +39,14 @@
   hardware = {
     bluetooth.enable = true;
     bluetooth.powerOnBoot = true;
+    bluetooth.settings = {
+      General = {
+        Experimental = true;
+        FastConnectable = true;
+      };
+      Policy.AutoEnable = true;
+      GATT.Cache = "no";
+    };
     nvidia.modesetting.enable = true;
     nvidia.open = true;
   };
