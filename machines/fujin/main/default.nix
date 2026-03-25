@@ -105,6 +105,8 @@
     window-manager.hypr.enable = true;
 
     display-manager.ly.enable = true;
+
+    gaming.enable = true;
   };
 
   ###

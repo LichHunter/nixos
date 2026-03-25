@@ -14,5 +14,6 @@
     ./display-manager
     ./gitlab
     ./jenkins
+    ./gaming
   ];
 }
