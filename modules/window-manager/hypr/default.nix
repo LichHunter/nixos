@@ -45,7 +45,6 @@ in {
     home-manager.users.fujin.config = {
       home.packages = with pkgs; [
         swww
-        mako
         pipewire
         wireplumber
         libnotify
@@ -87,7 +86,6 @@ in {
           ];
 
           exec-once = [
-            "mako"
             "polkit-kde-agent"
             "emacs --fg-daemon"
             "hypridle"
@@ -97,7 +95,7 @@ in {
             #"element-desktop"
             "keepassxc"
             "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
-          ] ++ lib.optionals hm-cfg.bar.waybar.enable [ "waybar" ];
+          ] ++ lib.optionals hm-cfg.bar.waybar.enable [ "waybar" "mako" ];
 
           "$mainMod" = "SUPER";
 

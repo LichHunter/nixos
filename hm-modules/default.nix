@@ -9,5 +9,6 @@
     ./browser
     ./terminal
     ./development
+    ./notification
   ];
 }

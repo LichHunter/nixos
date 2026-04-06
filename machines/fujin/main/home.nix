@@ -65,6 +65,8 @@
       vscode.enable = true;
       jetbrains.toolbox.enable = true;
     };
+
+    notification.mako.enable = true;
   };
 
   programs = {
