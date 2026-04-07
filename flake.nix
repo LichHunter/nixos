@@ -67,6 +67,8 @@
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
 
     minegrub-theme.url = "github:Lxtharia/minegrub-theme";
+
+    thefuck.url = "github:LichHunter/thefuck";
   };
 
   outputs = {

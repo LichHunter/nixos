@@ -1,4 +1,4 @@
-{ config, lib, pkgs, username, ... }:
+{ inputs, config, lib, pkgs, username, ... }:
 
 {
   home = {
@@ -32,6 +32,7 @@
           nixos-test = "sudo nixos-rebuild test --flake ~/nixos/#${username}";
           nixos-switch = "sudo nixos-rebuild switch --flake ~/nixos/#${username}";
           nixos-boot = "sudo nixos-rebuild boot --flake ~/nixos/#${username}";
+          fuck = "thefuck $\"(history | last 1 | get command | get 0)\"";
         };
       };
 
@@ -148,7 +149,7 @@
 
     # gaming
     prismlauncher
-  ];
+  ] ++ [ inputs.thefuck.packages.${pkgs.system}.default ];
 
   stylix = {
     enable = true;
