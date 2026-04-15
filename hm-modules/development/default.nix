@@ -22,7 +22,7 @@ in {
 
     home.file."jdk/openjdk17".source = pkgs.jdk17;
     home.file."jdk/openjdk21".source = pkgs.jdk21;
-    home.file."jdk/openjdk25".source = pkgs.jdk25;
+    home.file."jdk/openjdk25".source = pkgs.jdk25_headless;
     home.file."jdk/zulu25".source = pkgs.zulu25;
     home.file."nodejs/nodejs_22".source = pkgs.nodejs_22;
     home.file."python/python3".source = pkgs.python3;

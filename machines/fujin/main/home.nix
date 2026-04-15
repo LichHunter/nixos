@@ -133,6 +133,7 @@
     #vial #keyboard configurator
     #qmk
     google-chrome
+    unzip
 
     #libreoffice
     grim
