@@ -41,6 +41,22 @@ in {
         }
         {
           profile = {
+            name = "home2";
+            outputs = [
+              {
+                criteria = "eDP-1";
+                position = "3840,720";
+              }
+              {
+                criteria = "Samsung Electric Company U32R59x H1AK500000";
+                position = "0,0";
+                mode = "3840x2160";
+              }
+            ];
+          };
+        }
+        {
+          profile = {
             name = "reserve-home";
             outputs = [
               {

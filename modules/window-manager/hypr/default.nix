@@ -44,7 +44,7 @@ in {
 
     home-manager.users.fujin.config = {
       home.packages = with pkgs; [
-        swww
+        awww
         pipewire
         wireplumber
         libnotify
@@ -69,7 +69,7 @@ in {
         ];
 
         settings = {
-          monitor = ",highres,auto,1";
+          monitor = ",preferred,auto,1";
           source = "~/.config/hypr/colors";
 
           env = [
@@ -234,8 +234,8 @@ in {
 
           workspace = [
             #"0, monitor:DP-1"
-            "8, monitor:e-DP-1"
-            "9, monitor:e-DP-1"
+            "8, monitor:eDP-1"
+            "9, monitor:eDP-1"
             #"9, on-created-empty:[tiled] thunderbird"
           ];
 
