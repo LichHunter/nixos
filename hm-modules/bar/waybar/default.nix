@@ -37,6 +37,10 @@ in {
             "hyprland/window"
           ];
 
+          "hyprland/workspaces" = {
+            active-only = true;
+          };
+
           modules-center = [
             "clock"
           ];
