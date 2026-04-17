@@ -1,10 +1,16 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
 let
   cfg = config.dov.kanshi;
-in {
+in
+{
   options.dov.kanshi.enable = mkEnableOption "kanshi config";
 
   config = mkIf cfg.enable {
@@ -29,12 +35,18 @@ in {
             outputs = [
               {
                 criteria = "eDP-1";
-                position = "480,1440";
+                position = "2160,1440";
+                mode = "2560x1440@165Hz";
               }
               {
                 criteria = "LG Electronics LG ULTRAWIDE 201NTTQC5617";
+                position = "3440,0";
+                mode = "3440x1440@49.95Hz";
+              }
+              {
+                criteria = "Lenovo Group Limited LEN G34w-10 URW07XK8";
                 position = "0,0";
-                mode = "3440x1440";
+                mode = "3440x1440@50Hz";
               }
             ];
           };
@@ -66,7 +78,7 @@ in {
               {
                 criteria = "DP-5";
                 position = "0,0";
-                mode = "3440x1440";
+                mode = "3440x1440@50Hz";
               }
             ];
           };

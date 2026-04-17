@@ -260,3 +260,8 @@
     :bind ("C-c C-'" . claude-code-ide-menu) ; Set your favorite keybinding
     :config
     (claude-code-ide-emacs-tools-setup))) ; Optionally enable Emacs MCP tools
+
+
+(after! treemacs
+    (setq treemacs-collapse-dirs 3)
+  )

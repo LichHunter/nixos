@@ -1220,11 +1220,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1775480016,
-        "narHash": "sha256-DXsHc7JC1Ffm2win6oCZHu966YJR37Hy3J25UGXt9Eo=",
+        "lastModified": 1776248910,
+        "narHash": "sha256-MrwY8D48uZMTI/D6TEBmG1osklyAlqdtYeH+1cBeRNU=",
         "owner": "LichHunter",
         "repo": "thefuck",
-        "rev": "c1145c95d9bde53ec912e493c7c8e6ccc74b136d",
+        "rev": "7cac5ac8709dade676264af51afbe7a4d3c84582",
         "type": "github"
       },
       "original": {

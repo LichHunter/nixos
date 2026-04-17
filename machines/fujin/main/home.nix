@@ -122,6 +122,7 @@
     btop
     htop
     nvitop
+    tree
 
     #torrent
     qbittorrent
