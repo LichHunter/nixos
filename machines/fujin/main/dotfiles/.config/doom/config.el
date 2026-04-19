@@ -148,15 +148,11 @@
   (require 'lsp-java-boot)
   (require 'dap-java)
 
-  ;; to enable the lenses
+  ;; Enable lenses
   (add-hook 'lsp-mode-hook #'lsp-lens-mode)
   (add-hook 'java-mode-hook #'lsp-java-boot-lens-mode)
-  (add-hook 'java-mode-hook #'lsp-java-boot-lens-mode)
-  (lsp-register-client
-    (make-lsp-client :new-connection (lsp-stdio-connection "nixd")
-                     :major-modes '(nix-mode)
-                     :priority 0
-                     :server-id 'nixd))
+
+  ;; Lombok support via .dir-locals.el (set lombok-version there)
   (defun my/setup-project-lombok ()
     (when (and (boundp 'lombok-version) lombok-version)
       (let ((lombok-jar (expand-file-name
@@ -238,22 +234,21 @@
         emms-info-functions '(emms-info-mpd)))
 
 (after! lsp-mode
-  ;; (lsp-register-client                  ;
-  ;;   (make-lsp-client :new-connection (lsp-stdio-connection "nixd")
-  ;;                    :major-modes '(nix-mode)
-  ;;                    :priority 0
-  ;;                    :server-id 'nixd))
-(use-package lsp-nix
-  :ensure lsp-mode
-  :after (lsp-mode)
-  :demand t
-  :custom
-  (lsp-nix-nil-formatter ["nixpkgs-fmt"]))
+  ;; Prevent Semgrep from receiving Java-specific commands it can't handle
+  (lsp-disable-method-for-server "workspace/executeCommand" 'semgrep-ls)
 
-(use-package nix-mode
-  :hook (nix-mode . lsp-deferred)
-  :ensure t)
-  )
+  ;; Register nixd LSP client for Nix files
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection "nixd")
+                    :major-modes '(nix-mode)
+                    :priority 0
+                    :server-id 'nixd))
+
+  ;; Nix LSP configuration
+  (setq lsp-nix-nil-formatter ["nixpkgs-fmt"]))
+
+;; Enable LSP for nix-mode
+(add-hook! 'nix-mode-hook #'lsp-deferred)
 
 (after! claude-code-ide
   (use-package claude-code-ide
