@@ -152,18 +152,98 @@
   (add-hook 'lsp-mode-hook #'lsp-lens-mode)
   (add-hook 'java-mode-hook #'lsp-java-boot-lens-mode)
 
-  ;; Lombok support via .dir-locals.el (set lombok-version there)
-  (defun my/setup-project-lombok ()
-    (when (and (boundp 'lombok-version) lombok-version)
-      (let ((lombok-jar (expand-file-name
-                         (format "~/.m2/repository/org/projectlombok/lombok/%s/lombok-%s.jar"
-                                 lombok-version lombok-version))))
-        (when (file-exists-p lombok-jar)
-          (setq-local lsp-java-vmargs
-                      (append (default-value 'lsp-java-vmargs)
-                              (list (concat "-javaagent:" lombok-jar))))))))
+  ;; =============================================================================
+  ;; Smart Lombok Support
+  ;; - Java 23+: Uses javac mode (Lombok works as annotation processor, no agent)
+  ;; - Java <23: Queries Maven for Lombok version, downloads if needed, uses -javaagent
+  ;; =============================================================================
 
-  (add-hook 'java-mode-hook #'my/setup-project-lombok))
+  (defun my/maven-get-property (property)
+    "Get a Maven property value from current project."
+    (when-let ((pom-dir (locate-dominating-file default-directory "pom.xml")))
+      (let ((default-directory pom-dir))
+        (string-trim
+         (shell-command-to-string
+          (format "mvn help:evaluate -Dexpression=%s -q -DforceStdout 2>/dev/null" property))))))
+
+  (defun my/get-project-java-version ()
+    "Get Java version from project (maven.compiler.release or source)."
+    (when-let ((pom-dir (locate-dominating-file default-directory "pom.xml")))
+      (let* ((release (my/maven-get-property "maven.compiler.release"))
+             (source (my/maven-get-property "maven.compiler.source"))
+             (version-str (cond
+                           ((and release (not (string-match-p "^\\$" release))) release)
+                           ((and source (not (string-match-p "^\\$" source))) source)
+                           (t nil))))
+        (when version-str
+          (string-to-number (replace-regexp-in-string "^1\\." "" version-str))))))
+
+  (defvar my/lombok-cache (make-hash-table :test 'equal)
+    "Cache of project-root -> lombok-jar-path.")
+
+  (defun my/get-lombok-version-from-maven ()
+    "Get Lombok version from Maven classpath."
+    (when-let ((pom-dir (locate-dominating-file default-directory "pom.xml")))
+      (let* ((default-directory pom-dir)
+             (classpath (shell-command-to-string
+                         "mvn dependency:build-classpath -Dmdep.outputFile=/dev/stdout -q 2>/dev/null")))
+        (when (string-match "/lombok-\\([0-9][^/]*\\)\\.jar" classpath)
+          (match-string 1 classpath)))))
+
+  (defun my/lombok-jar-path (version)
+    "Return path to Lombok jar in Maven repository."
+    (expand-file-name
+     (format "~/.m2/repository/org/projectlombok/lombok/%s/lombok-%s.jar" version version)))
+
+  (defun my/ensure-lombok-downloaded (version)
+    "Ensure Lombok VERSION is downloaded to Maven repository."
+    (let ((jar-path (my/lombok-jar-path version)))
+      (unless (file-exists-p jar-path)
+        (message "Downloading Lombok %s..." version)
+        (shell-command
+         (format "mvn dependency:get -Dartifact=org.projectlombok:lombok:%s -q" version))
+        (message "Lombok %s downloaded." version))
+      (when (file-exists-p jar-path)
+        jar-path)))
+
+  (defun my/setup-lombok ()
+    "Configure Lombok support based on project's Java version and dependencies.
+Must be called BEFORE jdtls starts. Sets global lsp-java-vmargs."
+    (when-let ((pom-dir (locate-dominating-file default-directory "pom.xml")))
+      (let* ((project-root (expand-file-name pom-dir))
+             (cached-jar (gethash project-root my/lombok-cache))
+             (java-version (my/get-project-java-version)))
+        (cond
+         ;; Java 23+: Use javac mode - Lombok works as annotation processor
+         ((and java-version (>= java-version 23))
+          (unless (member "-Djava.jdt.ls.javac.enabled=on" lsp-java-vmargs)
+            (setq lsp-java-vmargs
+                  (append lsp-java-vmargs '("-Djava.jdt.ls.javac.enabled=on")))
+            (message "Java %d: javac mode enabled (Lombok auto-discovered)" java-version)))
+
+         ;; Java <23: Use -javaagent with Lombok jar
+         (t
+          (let ((lombok-jar (or cached-jar
+                                (when-let ((version (or (my/get-lombok-version-from-maven)
+                                                        (and (boundp 'lombok-version) lombok-version))))
+                                  (my/ensure-lombok-downloaded version)))))
+            (when lombok-jar
+              (puthash project-root lombok-jar my/lombok-cache)
+              (let ((agent-arg (concat "-javaagent:" lombok-jar)))
+                ;; Remove any old lombok agents, add current one
+                (setq lsp-java-vmargs
+                      (append (seq-remove (lambda (arg) (string-match-p "-javaagent:.*lombok" arg))
+                                          lsp-java-vmargs)
+                              (list agent-arg)))
+                (message "Lombok configured: %s" lombok-jar)))))))))
+
+  ;; Advice lsp-java--ls-command to inject lombok BEFORE command is built
+  (defun my/inject-lombok-into-vmargs (orig-fn)
+    "Advice to inject Lombok agent into lsp-java-vmargs before command is built."
+    (my/setup-lombok)
+    (funcall orig-fn))
+
+  (advice-add 'lsp-java--ls-command :around #'my/inject-lombok-into-vmargs))
   
 
 (add-to-list 'safe-local-variable-values #'stringp)
