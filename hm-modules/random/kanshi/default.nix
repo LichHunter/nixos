@@ -35,17 +35,17 @@ in
             outputs = [
               {
                 criteria = "eDP-1";
-                position = "2160,1440";
+                position = "0,1440";
                 mode = "2560x1440@165Hz";
               }
               {
                 criteria = "LG Electronics LG ULTRAWIDE 201NTTQC5617";
-                position = "3440,0";
+                position = "2560,1440";
                 mode = "3440x1440@49.95Hz";
               }
               {
                 criteria = "Lenovo Group Limited LEN G34w-10 URW07XK8";
-                position = "0,0";
+                position = "2560,0";
                 mode = "3440x1440@50Hz";
               }
             ];
