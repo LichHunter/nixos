@@ -114,7 +114,7 @@
     semgrep
     devpod
     tmux
-    bottles
+    #bottles
     terraform
     kubectl
     kubectx

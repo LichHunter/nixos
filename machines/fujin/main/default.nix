@@ -13,7 +13,10 @@
     (import ./overlays/zulu22.nix)
   ];
 
-  security.pki.certificateFiles = [ ./certs/homelab-com.pem ];
+  security.pki.certificateFiles = [
+    ./certs/homelab-com.pem
+    ./certs/homelab-lan-chain.crt
+  ];
 
   users.users.${username} = {
     description = "NixOS Omen Laptop";

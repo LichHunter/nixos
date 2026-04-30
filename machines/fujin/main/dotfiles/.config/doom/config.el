@@ -317,6 +317,13 @@ Must be called BEFORE jdtls starts. Sets global lsp-java-vmargs."
   ;; Prevent Semgrep from receiving Java-specific commands it can't handle
   (lsp-disable-method-for-server "workspace/executeCommand" 'semgrep-ls)
 
+  ;; Fix: boot-ls (Spring Boot LS) doesn't implement willSaveWaitUntil but lsp-mode
+  ;; sends it anyway when multiple servers are connected (jdtls + boot-ls for Java).
+  ;; boot-ls uses lsp4j's default which throws UnsupportedOperationException, causing hang.
+  ;; See: https://github.com/spring-projects/spring-tools (SimpleLanguageServer.java:455)
+  ;; Bug is in lsp-mode's multi-server capability checking, not boot-ls.
+  (lsp-disable-method-for-server "textDocument/willSaveWaitUntil" 'boot-ls)
+
   ;; Register nixd LSP client for Nix files
   (lsp-register-client
    (make-lsp-client :new-connection (lsp-stdio-connection "nixd")
@@ -325,17 +332,40 @@ Must be called BEFORE jdtls starts. Sets global lsp-java-vmargs."
                     :server-id 'nixd))
 
   ;; Nix LSP configuration
-  (setq lsp-nix-nil-formatter ["nixpkgs-fmt"]))
+  (setq lsp-nix-nil-formatter ["nixpkgs-fmt"])
+
+  ;; Fix: Handle textEdit with only :newText and no range (jdtls lazy textEdit bug)
+  ;; When jdtls returns textEdit with only :newText and no :range/:insert/:replace,
+  ;; lsp-mode silently fails to insert. This uses markers as fallback.
+  (advice-add 'lsp-completion--exit-fn :around
+              (lambda (orig-fn candidate status &optional candidates)
+                (let* ((item (plist-get (text-properties-at 0 candidate) 'lsp-completion-item))
+                       (text-edit (when item (lsp:completion-item-text-edit? item)))
+                       (markers (plist-get (text-properties-at 0 candidate) 'lsp-completion-markers)))
+                  ;; If textEdit exists but has no range, fix it using markers
+                  (if (and text-edit 
+                           (plist-get text-edit :newText)
+                           (not (plist-get text-edit :range))
+                           (not (plist-get text-edit :insert))
+                           markers)
+                      (let ((start (car markers))
+                            (end (cadr markers)))
+                        (when (and start end (markerp end))
+                          (setq end (marker-position end)))
+                        (when (and start end)
+                          ;; Delete the prefix and insert the new text manually
+                          (delete-region start end)
+                          (goto-char start)
+                          (insert (plist-get text-edit :newText))))
+                    ;; Otherwise call original
+                    (funcall orig-fn candidate status candidates))))
+              '((name . lsp-completion--exit-fn-advice)))
+
+  ;; Use company-capf with yasnippet for completions
+  (setq +lsp-company-backends '(company-capf :with company-yasnippet)))
 
 ;; Enable LSP for nix-mode
 (add-hook! 'nix-mode-hook #'lsp-deferred)
-
-(after! claude-code-ide
-  (use-package claude-code-ide
-    :bind ("C-c C-'" . claude-code-ide-menu) ; Set your favorite keybinding
-    :config
-    (claude-code-ide-emacs-tools-setup))) ; Optionally enable Emacs MCP tools
-
 
 (after! treemacs
     (setq treemacs-collapse-dirs 3)
