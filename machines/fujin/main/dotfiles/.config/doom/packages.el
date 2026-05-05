@@ -56,3 +56,5 @@
 (package! web-server)
 
 (package! just-mode)
+
+(package! protobuf-mode)

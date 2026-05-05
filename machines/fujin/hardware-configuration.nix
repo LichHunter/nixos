@@ -26,7 +26,7 @@
       kernelModules = [ ];
     };
     kernelModules = [ "kvm-amd" ];
-    kernelPackages = pkgs.linuxPackages_latest;
+    kernelPackages = pkgs.linuxPackages_6_18;
 
     # allow perf as user | needed for intellij to run profiler
     kernel.sysctl."kernel.perf_event_paranoid" = 1;

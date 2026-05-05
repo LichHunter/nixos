@@ -110,6 +110,8 @@
     display-manager.ly.enable = true;
 
     gaming.enable = true;
+
+    dynamic-theme.enable = true;
   };
 
   ###
@@ -126,7 +128,7 @@
 
   stylix = {
     enable = true;
-    base16Scheme = "${pkgs.base16-schemes}/share/themes/gruvbox-dark-hard.yaml";
+    # base16Scheme managed by dov.dynamic-theme module
 
     fonts = {
       serif = {

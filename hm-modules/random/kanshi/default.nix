@@ -46,7 +46,7 @@ in
               {
                 criteria = "Lenovo Group Limited LEN G34w-10 URW07XK8";
                 position = "2560,0";
-                mode = "3440x1440@50Hz";
+                mode = "3440x1440@60Hz";
               }
             ];
           };
@@ -76,9 +76,9 @@ in
                 position = "480,1440";
               }
               {
-                criteria = "DP-5";
+                criteria = "Lenovo Group Limited LEN G34w-10 URW07XK8";
                 position = "0,0";
-                mode = "3440x1440@50Hz";
+                mode = "3440x1440@60Hz";
               }
             ];
           };

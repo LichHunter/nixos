@@ -367,6 +367,31 @@ Must be called BEFORE jdtls starts. Sets global lsp-java-vmargs."
 ;; Enable LSP for nix-mode
 (add-hook! 'nix-mode-hook #'lsp-deferred)
 
+;; Protobuf configuration
+(use-package! protobuf-mode
+  :mode "\\.proto\\'"
+  :hook (protobuf-mode . lsp-deferred)
+  :config
+  ;; Custom indentation (2 spaces, no tabs)
+  (defconst my-protobuf-style
+    '((c-basic-offset . 2)
+      (indent-tabs-mode . nil)))
+  (add-hook 'protobuf-mode-hook
+            (lambda () (c-add-style "my-protobuf-style" my-protobuf-style t))))
+
+;; Register buf LSP client for protobuf
+(after! lsp-mode
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection '("buf" "lsp" "serve"))
+                    :activation-fn (lsp-activate-on "protobuf")
+                    :language-id "protobuf"
+                    :priority 1
+                    :server-id 'buf-lsp)))
+
 (after! treemacs
-    (setq treemacs-collapse-dirs 3)
-  )
+    (setq treemacs-collapse-dirs 3))
+
+;; Prevent evil-jumps-history from corrupting savehist
+;; (it contains markers/buffers that can't serialize properly)
+(after! savehist
+  (add-to-list 'savehist-ignored-variables 'evil-jumps-history))

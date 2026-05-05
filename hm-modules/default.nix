@@ -10,5 +10,6 @@
     ./terminal
     ./development
     ./notification
+    ./theme
   ];
 }

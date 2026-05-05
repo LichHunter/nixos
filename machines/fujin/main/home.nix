@@ -68,6 +68,8 @@
     };
 
     notification.mako.enable = true;
+
+    dynamic-theme.enable = true;
   };
 
   programs = {
