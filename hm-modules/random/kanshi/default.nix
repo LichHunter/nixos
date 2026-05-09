@@ -57,11 +57,16 @@ in
             outputs = [
               {
                 criteria = "eDP-1";
-                position = "3840,720";
+                position = "0,720";
+              }
+              {
+                criteria = "Dell Inc. DELL P2724DEB 6W7KJF4";
+                position = "2560,720";
+                mode = "2560x1440";
               }
               {
                 criteria = "Samsung Electric Company U32R59x H1AK500000";
-                position = "0,0";
+                position = "5120,0";
                 mode = "3840x2160";
               }
             ];

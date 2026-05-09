@@ -125,6 +125,7 @@
     htop
     nvitop
     tree
+    bruno
 
     #torrent
     qbittorrent
