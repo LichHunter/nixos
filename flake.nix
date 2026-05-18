@@ -69,6 +69,8 @@
     minegrub-theme.url = "github:Lxtharia/minegrub-theme";
 
     thefuck.url = "github:LichHunter/thefuck";
+
+    backlog.url = "github:LichHunter/backlog";
   };
 
   outputs = {
@@ -200,6 +202,7 @@
           inputs.stylix.nixosModules.stylix
           inputs.nix-ld.nixosModules.nix-ld
           inputs.minegrub-theme.nixosModules.default
+          inputs.backlog.nixosModules.default
 
           ./modules
         ] # Extra modules

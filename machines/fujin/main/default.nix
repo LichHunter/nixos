@@ -87,6 +87,14 @@
 
   services.tailscale.enable = true;
 
+  services.personal-backlog = {
+    enable = true;
+    port = 48080;
+    user = "${username}";
+    group = "users";
+    dataDir = "/home/fujin/.local/share/backlog";
+  };
+
   # Keyboard configuraions
   services.udev = {
 
