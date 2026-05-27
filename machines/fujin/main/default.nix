@@ -44,6 +44,8 @@
   # users.extraGroups.vboxusers.members = [ "${username}" ];
 
   programs = {
+    fuse.userAllowOther = true;
+
     nix-ld.dev.enable = true;
 
     nm-applet.enable = true;
