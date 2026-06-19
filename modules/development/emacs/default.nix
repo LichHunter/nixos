@@ -18,7 +18,7 @@ in {
         ## Emacs itself
         binutils # native-comp needs 'as', provided by this
         # 28.2 + native-comp
-        ((emacsPackagesFor emacs-unstable).emacsWithPackages (epkgs: [
+        ((emacsPackagesFor emacs30).emacsWithPackages (epkgs: [
           epkgs.vterm
           epkgs.treesit-grammars.with-all-grammars
           epkgs.mu4e

@@ -113,6 +113,7 @@
     jetbrains.webstorm
     #jetbrains.pycharm-community-src
     direnv
+    devenv
     semgrep
     devpod
     tmux
