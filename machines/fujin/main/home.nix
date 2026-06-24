@@ -103,7 +103,7 @@
     # social
     telegram-desktop
     #thunderbird-latest
-    #element-desktop
+    element-desktop
     #teams-for-linux
     #webcord
     discord
