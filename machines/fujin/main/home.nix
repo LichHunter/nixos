@@ -87,6 +87,13 @@
           directory = ["/home/${username}/nixos-dotfiles" "/home/${username}/.cache/nix"];
         };
       };
+      hooks = {
+        commit-msg = pkgs.writeScript "commit-msg" ''
+          #!${pkgs.bash}/bin/bash
+          # Remove Co-Authored-by lines from commit messages (Claude likes to add these)
+          ${pkgs.gnused}/bin/sed -i '/^Co-[Aa]uthored-[Bb]y:/d' "$1"
+        '';
+      };
     };
   };
 

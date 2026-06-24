@@ -395,3 +395,7 @@ Must be called BEFORE jdtls starts. Sets global lsp-java-vmargs."
 ;; (it contains markers/buffers that can't serialize properly)
 (after! savehist
   (add-to-list 'savehist-ignored-variables 'evil-jumps-history))
+
+;; vterm: use system default shell (nushell)
+(after! vterm
+  (setq vterm-shell (getenv "SHELL")))
