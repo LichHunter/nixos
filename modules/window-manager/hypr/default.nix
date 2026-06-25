@@ -12,6 +12,10 @@ in {
     programs.hyprland = {
       enable = true;
       xwayland.enable = true;
+      # Launch Hyprland via UWSM (Universal Wayland Session Manager). This
+      # automatically enables programs.uwsm and manages the systemd
+      # graphical-session / wayland-session@Hyprland targets and environment.
+      withUWSM = true;
     };
 
     environment = {
@@ -60,194 +64,194 @@ in {
         hypridle
       ];
 
+      # The Hyprland config below is generated as native Lua (Hyprland >= 0.55).
+      # Stylix's hyprland target emits hyprlang-style `settings` (flat dotted
+      # keys like "col.active_border") which do not map cleanly onto the Lua
+      # `hl.config{}` table API, and the previous config already force-overrode
+      # stylix's borders anyway. We therefore disable the stylix hyprland target
+      # and set the colors we care about explicitly in the Lua config.
+      stylix.targets.hyprland.enable = lib.mkForce false;
+
       wayland.windowManager.hyprland = {
         enable = true;
         xwayland.enable = true;
         package = null;
         portalPackage = null;
-        configType = "hyprlang";
+        configType = "lua";
 
-        plugins = [
-          #inputs.split-monitor-workspaces.packages.${pkgs.stdenv.hostPlatform.system}.split-monitor-workspaces
-        ];
+        # Required when launching Hyprland through UWSM: UWSM owns the systemd
+        # graphical-session target, so home-manager must not create its own.
+        systemd.enable = false;
 
-        settings = {
-          monitor = ",preferred,auto,1";
-          source = "~/.config/hypr/colors";
+        # split-monitor-workspaces is a Lua package (Hyprland >= 0.55), not a
+        # C++ plugin: it's require()d in extraConfig, not loaded here.
+        plugins = [ ];
 
-          env = [
-            "LIBVA_DRIVER_NAME,nvidia"
-            "XDG_SESSION_TYPE,wayland"
-            "WLR_NO_HARDWARE_CURSORS,1"
-          ];
+        # Whole config written as native Lua. We use `extraConfig` (raw Lua)
+        # rather than the `settings` attrset because Lua-mode binds need
+        # `hl.dsp.*` dispatcher expressions, a `mainMod` local and a loop for
+        # the workspace binds - none of which the attrset form expresses
+        # cleanly ($variables render to invalid `hl.$mainMod(...)`).
+        extraConfig = ''
+          -- Migrated from hyprlang to Lua. See https://wiki.hypr.land/Configuring/Start/
+          local mainMod = "SUPER"
 
-          #Autostart
-          exec = [
-            # Fix slow startup
-            "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
-            "dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
-          ];
+          -- split-monitor-workspaces (Lua package). Use the absolute Nix store
+          -- path: Hyprland's cwd is not the config dir, so the relative ./?.lua
+          -- trick from upstream's README does not resolve under UWSM.
+          package.path = package.path .. ";${inputs.split-monitor-workspaces}/lua/?.lua"
+          local smw = require("split-monitor-workspaces")
+          smw.setup({
+            workspace_count = 10,
+            keep_focused = true,
+            enable_notifications = false,
+            -- Don't pre-create empty workspaces: keeps the waybar workspaces
+            -- module showing only workspaces that actually have windows (plus
+            -- the currently focused one).
+            enable_persistent_workspaces = false,
+            enable_wrapping = true,
+          })
 
-          exec-once = [
-            "polkit-kde-agent"
-            "emacs --fg-daemon"
-            "hypridle"
-            "kanshi"
-            "virsh net-start default"
-            #"thunderbird"
-            #"element-desktop"
-            "keepassxc"
-            "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
-          ] ++ lib.optionals hm-cfg.bar.waybar.enable [ "waybar" "mako" ];
+          -- Monitors (was: monitor = ",preferred,auto,1")
+          hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 
-          "$mainMod" = "SUPER";
+          -- Environment
+          hl.env("LIBVA_DRIVER_NAME", "nvidia")
+          hl.env("XDG_SESSION_TYPE", "wayland")
+          hl.env("WLR_NO_HARDWARE_CURSORS", "1")
 
-          bind = [
-            "$mainMod, G, fullscreen,"
-            "$mainMod, t, togglegroup"
-            "$mainMod, v, togglefloating"
-            #"$mainMod, s, togglesplit" # invalid dispatcher, requested "togglesplit" does not exist
+          -- Config variables
+          hl.config({
+            general = {
+              gaps_in = 5,
+              gaps_out = 20,
+              border_size = 2,
+              col = {
+                -- gradient active border (rgba(33ccffee) rgba(00ff99ee) 45deg)
+                active_border = { colors = { "rgba(33ccffee)", "rgba(00ff99ee)" }, angle = 45 },
+                inactive_border = "rgba(595959aa)",
+              },
+              layout = "dwindle",
+            },
+            decoration = {
+              rounding = 10,
+              shadow = { enabled = true, range = 4, render_power = 3 },
+            },
+            input = {
+              kb_layout = "us,ru,ua",
+              kb_options = "grp:win_space_toggle",
+              follow_mouse = 1,
+              touchpad = { natural_scroll = false },
+              sensitivity = 0,
+            },
+            animations = { enabled = true },
+            dwindle = { preserve_split = true },
+            master = { new_status = "master" },
+          })
 
-            #bind = $mainMod, RETURN, exec, kitty
-            "$mainMod, RETURN, exec, alacritty"
-            "$mainMod, o, exec, emacsclient -c"
-            "SUPER_SHIFT, RETURN, exec, thunar"
-            "SUPER_SHIFT, l, exec, hyprctl switchxkblayout at-translated-set-2-keyboard 0 && hyprlock"
+          -- Animation curves (was: bezier = ease,0.4,0.02,0.21,1)
+          hl.curve("ease", { type = "bezier", points = { { 0.4, 0.02 }, { 0.21, 1 } } })
 
-            #bind = $mainMod, M, exit,
-            "SUPER_SHIFT, q, killactive,"
+          -- Animations (was: NAME, ONOFF, SPEED, CURVE, [STYLE])
+          hl.animation({ leaf = "windows",    enabled = true, speed = 3.5, bezier = "ease", style = "slide" })
+          hl.animation({ leaf = "windowsOut", enabled = true, speed = 3.5, bezier = "ease", style = "slide" })
+          hl.animation({ leaf = "border",     enabled = true, speed = 6,   bezier = "ease" })
+          hl.animation({ leaf = "fade",       enabled = true, speed = 3,   bezier = "ease" })
+          hl.animation({ leaf = "workspaces", enabled = true, speed = 3.5, bezier = "ease" })
 
-            # Switch Keyboard Layouts
-            "$mainMod, SPACE, exec, hyprctl switchxkblayout teclado-gamer-husky-blizzard next"
+          -- Keybinds
+          hl.bind(mainMod .. " + G", hl.dsp.window.fullscreen())
+          hl.bind(mainMod .. " + t", hl.dsp.group.toggle())
+          hl.bind(mainMod .. " + v", hl.dsp.window.float({ action = "toggle" }))
 
-            '', Print, exec, grim -g "$(slurp)" - | wl-copy''
-            ''
-              SHIFT, Print, exec, IMG=~/Pictures/$(date +%Y-%m-%d_%H-%m-%s).png && grim -g "$(slurp)" $IMG''
+          hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd("alacritty"))
+          hl.bind(mainMod .. " + o", hl.dsp.exec_cmd("emacsclient -c"))
+          hl.bind("SUPER + SHIFT + RETURN", hl.dsp.exec_cmd("thunar"))
+          hl.bind("SUPER + SHIFT + l", hl.dsp.exec_cmd("hyprctl switchxkblayout at-translated-set-2-keyboard 0 && hyprlock"))
+          hl.bind("SUPER + SHIFT + q", hl.dsp.window.close())
 
-            # Functional keybinds
-            ",XF86AudioMicMute,exec,pamixer --default-source -t"
-            ",XF86MonBrightnessDown,exec,brightnessctl s 20-"
-            ",XF86MonBrightnessUp,exec,brightnessctl s 20+"
-            ",XF86AudioMute,exec,amixer -q sset Master toggle"
-            ",XF86AudioLowerVolume,exec,amixer -q sset Master 5%-"
-            ",XF86AudioRaiseVolume,exec,amixer -q sset Master 5%+"
-            ",XF86AudioPlay,exec,playerctl play-pause"
-            ",XF86AudioPause,exec,playerctl play-pause"
+          -- Switch keyboard layouts
+          hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("hyprctl switchxkblayout teclado-gamer-husky-blizzard next"))
 
-            # to switch between windows in a floating workspace
-            "SUPER,Tab,changegroupactive, f"
-            "SUPER_SHIFT,Tab,changegroupactive, b"
+          -- Screenshots
+          hl.bind("Print", hl.dsp.exec_cmd([[grim -g "$(slurp)" - | wl-copy]]))
+          hl.bind("SHIFT + Print", hl.dsp.exec_cmd([[IMG=~/Pictures/$(date +%Y-%m-%d_%H-%m-%s).png && grim -g "$(slurp)" $IMG]]))
 
-            # Move focus with mainMod + arrow keys
-            "$mainMod, h, movefocus, l"
-            "$mainMod, l, movefocus, r"
-            "$mainMod, k, movefocus, u"
-            "$mainMod, j, movefocus, d"
+          -- Functional / media keys
+          hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("pamixer --default-source -t"))
+          hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl s 20-"))
+          hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl s 20+"))
+          hl.bind("XF86AudioMute", hl.dsp.exec_cmd("amixer -q sset Master toggle"))
+          hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("amixer -q sset Master 5%-"))
+          hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("amixer -q sset Master 5%+"))
+          hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"))
+          hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"))
 
-            # Switch workspaces with mainMod + [0-9]
-            "$mainMod, 1, workspace, 1"
-            "$mainMod, 2, workspace, 2"
-            "$mainMod, 3, workspace, 3"
-            "$mainMod, 4, workspace, 4"
-            "$mainMod, 5, workspace, 5"
-            "$mainMod, 6, workspace, 6"
-            "$mainMod, 7, workspace, 7"
-            "$mainMod, 8, workspace, 8"
-            "$mainMod, 9, workspace, 9"
-            "$mainMod, 0, workspace, 10"
+          -- Switch between windows in a floating workspace (changegroupactive)
+          hl.bind("SUPER + Tab", hl.dsp.group.next())
+          hl.bind("SUPER + SHIFT + Tab", hl.dsp.group.prev())
 
-            # Move active window to a workspace with mainMod + SHIFT + [0-9]
-            "$mainMod SHIFT, 1, movetoworkspace, 1"
-            "$mainMod SHIFT, 2, movetoworkspace, 2"
-            "$mainMod SHIFT, 3, movetoworkspace, 3"
-            "$mainMod SHIFT, 4, movetoworkspace, 4"
-            "$mainMod SHIFT, 5, movetoworkspace, 5"
-            "$mainMod SHIFT, 6, movetoworkspace, 6"
-            "$mainMod SHIFT, 7, movetoworkspace, 7"
-            "$mainMod SHIFT, 8, movetoworkspace, 8"
-            "$mainMod SHIFT, 9, movetoworkspace, 9"
-            "$mainMod SHIFT, 0, movetoworkspace, 10"
+          -- Move focus
+          hl.bind(mainMod .. " + h", hl.dsp.focus({ direction = "left" }))
+          hl.bind(mainMod .. " + l", hl.dsp.focus({ direction = "right" }))
+          hl.bind(mainMod .. " + k", hl.dsp.focus({ direction = "up" }))
+          hl.bind(mainMod .. " + j", hl.dsp.focus({ direction = "down" }))
 
-            # Scroll through existing workspaces with mainMod + scroll
-            "$mainMod, mouse_down, workspace, e+1"
-            "$mainMod, mouse_up, workspace, e-1"
-            "$mainMod,SPACE, exec, hyprctl switchxkblayout at-translated-set-2-keyboard next"
+          -- Workspaces 1-10 (per-monitor): key 0 -> workspace 10
+          for i = 1, smw.get_amount_of_workspaces() do
+            local key = tostring(i)
+            if key == "10" then key = "0" end
+            hl.bind(mainMod .. " + " .. key, smw.workspace(tostring(i)))
+            hl.bind(mainMod .. " + SHIFT + " .. key, smw.move_to_workspace_silent(tostring(i)))
+          end
 
-          ] ++ lib.optionals hm-cfg.launcher.wofi.enable
-            [ "$mainMod, p, exec, wofi --show drun" ];
+          -- Scroll through workspaces with mainMod + scroll
+          hl.bind(mainMod .. " + mouse_down", smw.cycle_workspaces("next"))
+          hl.bind(mainMod .. " + mouse_up", smw.cycle_workspaces("prev"))
 
-          bindm = [
-            "$mainMod, mouse:272, movewindow"
-            "$mainMod, mouse:273, resizewindow"
-            "ALT, mouse:272, resizewindow"
-          ];
+          -- NOTE: pre-existing duplicate SUPER+SPACE bind (last one wins,
+          -- identical to the original hyprlang config).
+          hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("hyprctl switchxkblayout at-translated-set-2-keyboard next"))
+        ''
+        + lib.optionalString hm-cfg.launcher.wofi.enable ''
+          hl.bind(mainMod .. " + p", hl.dsp.exec_cmd("wofi --show drun"))
+        ''
+        + ''
 
-          input = {
-            kb_layout = "us,ru,ua";
-            kb_options = "grp:win_space_toggle";
+          -- Mouse binds (was: bindm)
+          hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
+          hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+          hl.bind("ALT + mouse:272", hl.dsp.window.resize(), { mouse = true })
 
-            follow_mouse = 1;
+          -- Workspace rules
+          hl.workspace_rule({ workspace = "8", monitor = "eDP-1" })
+          hl.workspace_rule({ workspace = "9", monitor = "eDP-1" })
 
-            touchpad = { natural_scroll = false; };
+          -- Window rules
+          hl.window_rule({ match = { title = "^(.*KeePassXC.*)$" }, workspace = "8" })
 
-            sensitivity = 0;
-          };
-
-          general = {
-            gaps_in = 5;
-            gaps_out = 20;
-            border_size = 2;
-            "col.active_border" =
-              lib.mkForce "rgba(33ccffee) rgba(00ff99ee) 45deg";
-            "col.inactive_border" = lib.mkForce "rgba(595959aa)";
-
-            layout = "dwindle";
-          };
-
-          decoration = {
-            rounding = 10;
-
-            shadow = {
-              enabled = true;
-              range = 4;
-              render_power = 3;
-            };
-          };
-
-          animations = {
-            enabled = "yes";
-
-            bezier = "ease,0.4,0.02,0.21,1";
-
-            animation = [
-              "windows, 1, 3.5, ease, slide"
-              "windowsOut, 1, 3.5, ease, slide"
-              "border, 1, 6, default"
-              "fade, 1, 3, ease"
-              "workspaces, 1, 3.5, ease"
-            ];
-          };
-
-          dwindle = {
-            preserve_split = "yes";
-          };
-
-          master = { new_status = "master"; };
-
-          workspace = [
-            #"0, monitor:DP-1"
-            "8, monitor:eDP-1"
-            "9, monitor:eDP-1"
-            #"9, on-created-empty:[tiled] thunderbird"
-          ];
-
-          windowrule = [
-            "workspace 8, match:title ^(.*KeePassXC.*)$"
-            #"noinitialfocus,match:class (jetbrains-)(.*),title:^win(.*), initialTitle:win.*, floating:1"
-          ];
-        };
+          -- Autostart (was: exec-once). UWSM imports the session environment,
+          -- so the old systemctl/dbus import-environment lines are dropped.
+          hl.on("hyprland.start", function()
+            hl.exec_cmd("polkit-kde-agent")
+            hl.exec_cmd("emacs --fg-daemon")
+            hl.exec_cmd("hypridle")
+            hl.exec_cmd("kanshi")
+            hl.exec_cmd("virsh net-start default")
+            hl.exec_cmd("keepassxc")
+        ''
+        + lib.optionalString hm-cfg.bar.waybar.enable ''
+            hl.exec_cmd("waybar")
+            hl.exec_cmd("mako")
+        ''
+        + ''
+          end)
+        '';
       };
 
+      # Stylix base16 palette exported as hyprlang variables. No longer sourced
+      # from the main Lua config (Lua has no `source`); kept for reference and
+      # for any hyprlang consumer that wants to source it.
       home.file.".config/hypr/colors".text = ''
         $background = ${colors.base00}
         $foreground = ${colors.base05}
@@ -272,6 +276,8 @@ in {
 
       xdg.configFile."hypr/hyprlock.conf".source = ./hyprlock.conf;
       xdg.configFile."hypr/hypridle.conf".source = ./hypridle.conf;
+
+      
     };
   };
 }

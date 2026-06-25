@@ -37,9 +37,11 @@ in {
             "hyprland/window"
           ];
 
-          "hyprland/workspaces" = {
-            active-only = true;
-          };
+          # NOTE: the hyprland/workspaces module is configured in
+          # ~/.config/waybar/config.json (waybar4.json), which is merged in via
+          # `include` and overrides anything set here. "Show only workspaces
+          # with windows" is achieved by disabling persistent workspaces in the
+          # Hyprland split-monitor-workspaces setup, not by a waybar flag.
 
           modules-center = [
             "clock"
