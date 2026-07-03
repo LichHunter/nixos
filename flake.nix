@@ -199,7 +199,6 @@
           # Applications
           inputs.copyparty.nixosModules.default
           inputs.vscode-server.nixosModules.default
-          inputs.stylix.nixosModules.stylix
           inputs.nix-ld.nixosModules.nix-ld
           inputs.minegrub-theme.nixosModules.default
           inputs.backlog.nixosModules.default

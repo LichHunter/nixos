@@ -163,11 +163,35 @@
     #mpc-cli
   ] ++ [ inputs.thefuck.packages.${pkgs.system}.default ];
 
+  # Stylix theming is driven by `dov.dynamic-theme` (hm-modules/theme),
+  # which sets `enable`, `base16Scheme` and `polarity` + specialisations.
+  # Here we only keep target overrides and the font set (moved from the
+  # old NixOS-level stylix config).
   stylix = {
-    enable = true;
-    autoEnable = true;
     targets = {
       kde.enable = false;
+    };
+
+    fonts = {
+      serif = {
+        package = pkgs.dejavu_fonts;
+        name = "DejaVu Serif";
+      };
+
+      sansSerif = {
+        package = pkgs.dejavu_fonts;
+        name = "DejaVu Sans";
+      };
+
+      monospace = {
+        package = pkgs.dejavu_fonts;
+        name = "DejaVu Sans Mono";
+      };
+
+      emoji = {
+        package = pkgs.noto-fonts-color-emoji;
+        name = "Noto Color Emoji";
+      };
     };
   };
 

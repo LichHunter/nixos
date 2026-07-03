@@ -15,6 +15,5 @@
     ./gitlab
     ./jenkins
     ./gaming
-    ./theme
   ];
 }

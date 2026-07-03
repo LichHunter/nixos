@@ -121,8 +121,6 @@
     display-manager.ly.enable = true;
 
     gaming.enable = true;
-
-    dynamic-theme.enable = true;
   };
 
   ###
@@ -133,35 +131,12 @@
     useUserPackages = true;
     backupFileExtension = "backup";
     extraSpecialArgs = { inherit inputs username; };
+    # Stylix is handled entirely at the Home Manager level (see
+    # hm-modules/theme). Load the stylix HM module here so the `stylix`
+    # option exists for fujin's home configuration.
+    sharedModules = [ inputs.stylix.homeModules.stylix ];
 
     users."${username}" = { imports = [ ./home.nix ] ++ extraHomeModules; };
-  };
-
-  stylix = {
-    enable = true;
-    # base16Scheme managed by dov.dynamic-theme module
-
-    fonts = {
-      serif = {
-        package = pkgs.dejavu_fonts;
-        name = "DejaVu Serif";
-      };
-
-      sansSerif = {
-        package = pkgs.dejavu_fonts;
-        name = "DejaVu Sans";
-      };
-
-      monospace = {
-        package = pkgs.dejavu_fonts;
-        name = "DejaVu Sans Mono";
-      };
-
-      emoji = {
-        package = pkgs.noto-fonts-color-emoji;
-        name = "Noto Color Emoji";
-      };
-    };
   };
 
   fonts.packages = with pkgs;
