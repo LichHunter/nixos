@@ -114,6 +114,7 @@
     development.emacs.enable = true;
 
     virtualisation.docker.enable = true;
+    virtualisation.incus.enable = true;
 
     window-manager.hypr.enable = true;
 

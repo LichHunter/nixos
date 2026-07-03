@@ -46,7 +46,7 @@ in {
       };
     };
 
-    home-manager.users.fujin.config = {
+    home-manager.users.${username}.config = {
       home.packages = with pkgs; [
         awww
         pipewire

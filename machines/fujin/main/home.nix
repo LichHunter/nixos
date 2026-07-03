@@ -25,6 +25,7 @@
 
       nu = {
         enable = true;
+        carapace.enable = true;
         shellAliases = {
           ll = "eza -al";
           cp = "rsync -ah --progress";
@@ -146,6 +147,7 @@
     #qmk
     google-chrome
     unzip
+    proton-vpn
 
     #libreoffice
     grim
@@ -159,9 +161,6 @@
     #mpd
     #mpv
     #mpc-cli
-
-    # gaming
-    prismlauncher
   ] ++ [ inputs.thefuck.packages.${pkgs.system}.default ];
 
   stylix = {
