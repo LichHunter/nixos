@@ -243,6 +243,9 @@ in {
             hl.exec_cmd("waybar")
             hl.exec_cmd("mako")
         ''
+        + lib.optionalString hm-cfg.bar.noctalia.enable ''
+            hl.exec_cmd("noctalia")
+        ''
         + ''
           end)
         '';

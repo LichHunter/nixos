@@ -134,7 +134,10 @@
     # Stylix is handled entirely at the Home Manager level (see
     # hm-modules/theme). Load the stylix HM module here so the `stylix`
     # option exists for fujin's home configuration.
-    sharedModules = [ inputs.stylix.homeModules.stylix ];
+    sharedModules = [
+      inputs.stylix.homeModules.stylix
+      inputs.noctalia.homeModules.default
+    ];
 
     users."${username}" = { imports = [ ./home.nix ] ++ extraHomeModules; };
   };

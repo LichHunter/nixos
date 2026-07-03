@@ -71,6 +71,11 @@
     thefuck.url = "github:LichHunter/thefuck";
 
     backlog.url = "github:LichHunter/backlog";
+
+    noctalia = {
+      url = "github:noctalia-dev/noctalia";
+      inputs.nixpkgs.follows = "unstable";
+    };
   };
 
   outputs = {

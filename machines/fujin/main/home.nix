@@ -47,9 +47,10 @@
 
     browser.zen.enable = true;
 
-    #window-manager.hypr.enable = true;
-
-    bar.waybar.enable = true;
+    bar = {
+      waybar.enable = false;
+      noctalia.enable = true;
+    };
 
     launcher.wofi.enable = true;
 
