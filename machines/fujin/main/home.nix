@@ -70,7 +70,10 @@
 
     notification.mako.enable = true;
 
-    dynamic-theme.enable = true;
+    dynamic-theme = {
+      enable = true;
+      wallpaperRepo = "https://gitea.susano-homelab.duckdns.org/fujin/gruvbox-wallpapers.git";
+    };
   };
 
   programs = {
@@ -87,13 +90,6 @@
         safe = {
           directory = ["/home/${username}/nixos-dotfiles" "/home/${username}/.cache/nix"];
         };
-      };
-      hooks = {
-        commit-msg = pkgs.writeScript "commit-msg" ''
-          #!${pkgs.bash}/bin/bash
-          # Remove Co-Authored-by lines from commit messages (Claude likes to add these)
-          ${pkgs.gnused}/bin/sed -i '/^Co-[Aa]uthored-[Bb]y:/d' "$1"
-        '';
       };
     };
   };

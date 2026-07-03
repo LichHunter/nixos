@@ -57,7 +57,7 @@ do
 done
 
 if [ -z "$gen" ]; then
-  echo "error: could not resolve Home Manager base generation" >&2
+  log_error "could not resolve Home Manager base generation"
   exit 1
 fi
 
@@ -72,18 +72,16 @@ case "$variant" in
 esac
 
 if [ ! -x "$activate" ]; then
-  echo "error: variant '$variant' not found at $activate" >&2
-  echo "Available: ${availableVariants}"
+  log_error "variant '$variant' not found at $activate"
+  log_info "available: ${availableVariants}"
   exit 1
 fi
 
-echo "Switching theme to $variant..."
+log_info "switching theme to ${variant}"
 
 # Best-effort: live-switch the running Doom Emacs daemon too. No config
 # files are touched; if the daemon isn't running or emacsclient isn't
-# installed (e.g. on a server), this is silently skipped. A theme symbol
-# that isn't installed in Doom makes emacsclient return non-zero, which we
-# also treat as skip.
+# installed (e.g. on a server), this is silently skipped.
 doom_theme=""
 if [ -n "$doomThemes" ]; then
   for pair in $doomThemes; do
@@ -92,12 +90,26 @@ if [ -n "$doomThemes" ]; then
     esac
   done
 fi
-if [ -n "$doom_theme" ] && command -v emacsclient >/dev/null 2>&1; then
-  if emacsclient --eval "(progn (mapc (function disable-theme) custom-enabled-themes) (load-theme (quote ${doom_theme}) t))" >/dev/null 2>&1; then
-    echo "Doom: ${doom_theme}"
+if [ -n "$doom_theme" ]; then
+  if command -v emacsclient >/dev/null 2>&1 \
+     && emacsclient --eval "(progn (mapc (function disable-theme) custom-enabled-themes) (load-theme (quote ${doom_theme}) t))" >/dev/null 2>&1; then
+    log_info "doom: ${doom_theme}"
   else
-    echo "note: Doom theme switch skipped (daemon not running or '${doom_theme}' not installed)" >&2
+    log_warn "doom theme not applied (daemon not running or '${doom_theme}' not installed)"
   fi
 fi
 
+# Pick a palette-matching wallpaper and apply it. This BLOCKS — on the very
+# first run wallpaper-pick clones the wallpaper repo and builds the palette
+# index, which can take a few minutes; progress is logged on stderr by the
+# pick/set scripts. Failures fall back to leaving the wallpaper unchanged.
+if [ "${wallpapersEnabled:-0}" = "1" ] && [ -n "${wallpaperPickBin:-}" ] && [ -n "${wallpaperSetBin:-}" ]; then
+  if wp="$("$wallpaperPickBin" "$variant")" && [ -n "$wp" ]; then
+    "$wallpaperSetBin" "$wp" || log_warn "wallpaper apply failed"
+  else
+    log_warn "wallpaper selection failed; leaving wallpaper unchanged"
+  fi
+fi
+
+log_info "activating Home Manager specialisation"
 exec "$activate"

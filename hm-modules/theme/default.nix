@@ -30,10 +30,52 @@ let
 
   availableVariants = concatStringsSep " " (attrNames themeVariants);
 
+  # `variant:schemeFile` pairs so the wallpaper picker can read each variant's
+  # base16 palette at runtime.
+  variantSchemes = concatStringsSep " "
+    (mapAttrsToList (variant: v: "${variant}:${v.scheme}") themeVariants);
+
   # variant:doomtheme pairs consumed by the theme-switch script's
   # best-effort Doom Emacs hook (see ./theme-switch.sh).
   doomThemeMap = concatStringsSep " "
     (mapAttrsToList (variant: theme: "${variant}:${theme}") cfg.doomThemes);
+
+  # Stylix is only declared on hosts that import its Home Manager module
+  # (e.g. `fujin`). Servers (susano, izanagi, amaterasu, ...) don't, so
+  # `stylix` isn't declared there. We probe option *declarations* (not
+  # config values) to avoid an evaluation cycle.
+  hasStylix = options ? stylix;
+
+  # --- Wallpaper handling (runtime-cloned repo + palette matching) ----------
+  wallpapersEnabled = cfg.wallpaperRepo != null;
+  wallpapersDir = "${config.home.homeDirectory}/Wallpapers";
+  # hyprpaper's config points here; set-wallpaper rebinds this symlink, so we
+  # never have to write hyprpaper config ourselves.
+  wallpaperSymlink = "${config.xdg.stateHome}/theme/wallpaper-current";
+
+  wallpaper-pick = pkgs.writeShellScriptBin "wallpaper-pick" ''
+    SCRIPT_TAG="wallpaper-pick"
+    ${builtins.readFile ./log.sh}
+    wallpapersDir="${wallpapersDir}"
+    wallpaperRepo="${cfg.wallpaperRepo or ""}"
+    variantSchemes="${variantSchemes}"
+    MAGICK="${getExe pkgs.imagemagick}"
+    GIT="${getExe pkgs.git}"
+    ${builtins.readFile ./wallpaper-pick.sh}
+  '';
+
+  wallpaper-set = pkgs.writeShellScriptBin "wallpaper-set" ''
+    SCRIPT_TAG="wallpaper-set"
+    ${builtins.readFile ./log.sh}
+    wallpaperSymlink="${wallpaperSymlink}"
+    ${builtins.readFile ./set-wallpaper.sh}
+  '';
+
+  # Applied once at login (after hyprpaper) to seed a base-variant wallpaper.
+  wallpaper-init = pkgs.writeShellScript "wallpaper-init" ''
+    wp="$(${getExe wallpaper-pick} ${baseVariant} 2>/dev/null)" || exit 0
+    [ -n "$wp" ] && ${getExe wallpaper-set} "$wp" || true
+  '';
 
   # Userspace theme switcher: activates a pre-built Home Manager
   # specialisation generation. No sudo, no OS rebuild — just runs the
@@ -42,17 +84,16 @@ let
   # The script logic lives in ./theme-switch.sh (plain shell, no Nix
   # escaping); we only inject the config-derived values it needs.
   theme-switch = pkgs.writeShellScriptBin "theme-switch" ''
+    SCRIPT_TAG="theme-switch"
+    ${builtins.readFile ./log.sh}
     baseVariant="${baseVariant}"
     availableVariants="${availableVariants}"
     doomThemes="${doomThemeMap}"
+    wallpapersEnabled="${if wallpapersEnabled then "1" else "0"}"
+    wallpaperPickBin="${if wallpapersEnabled then getExe wallpaper-pick else ""}"
+    wallpaperSetBin="${if wallpapersEnabled then getExe wallpaper-set else ""}"
     ${builtins.readFile ./theme-switch.sh}
   '';
-
-  # Stylix is only declared on hosts that import its Home Manager module
-  # (e.g. `fujin`). Servers (susano, izanagi, amaterasu, ...) don't, so
-  # `stylix` isn't declared there. We probe option *declarations* (not
-  # config values) to avoid an evaluation cycle.
-  hasStylix = options ? stylix;
 in {
   options.dov.dynamic-theme = {
     enable = mkEnableOption "dynamic theme switching";
@@ -95,24 +136,43 @@ in {
         map the variants to `catppuccin-mocha` / `catppuccin-latte`.
       '';
     };
+
+    wallpaperRepo = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      example = "https://example.org/me/wallpapers.git";
+      description = ''
+        Git URL of a wallpaper repository. When set, theme-switch also picks
+        a random wallpaper whose palette matches the current variant and
+        applies it via hyprpaper. The repo is cloned to
+        `~/Wallpapers` on first use (a one-time, runtime cost — it is NOT
+        fetched at build time, so `nix build` stays fast).
+      '';
+    };
   };
 
-  config = mkIf cfg.enable (
+  config = mkIf cfg.enable (mkMerge [
     {
-      home.packages = [ theme-switch ];
+      home.packages = [ theme-switch ]
+        ++ optionals wallpapersEnabled [ wallpaper-pick wallpaper-set ];
     }
+
     # Only reference the `stylix` option where it is actually declared.
     # `mkIf false` is NOT enough: the module system still rejects a
     # definition (even a disabled one) for an option that does not exist,
     # which breaks every host that doesn't import stylix. `optionalAttrs`
-    # removes the key structurally, so non-stylix hosts evaluate cleanly.
-    // optionalAttrs hasStylix {
+    # (keyed on `options ?`, i.e. *declarations* — never a config value) is
+    # the recursion-free way to gate structure on stylix presence.
+    (optionalAttrs hasStylix {
       stylix = {
         enable = true;
         autoEnable = true;
         # Base scheme/polarity; overridable per specialisation below.
         base16Scheme = mkDefault themeVariants.${baseVariant}.scheme;
         polarity = mkDefault themeVariants.${baseVariant}.polarity;
+        # When we manage hyprpaper's wallpaper ourselves, disable stylix's
+        # hyprpaper target so the two don't fight over the wallpaper path.
+        targets.hyprpaper.enable = mkForce (!wallpapersEnabled);
       };
 
       # Generate Home Manager specialisations for every non-base variant.
@@ -126,6 +186,32 @@ in {
           };
         };
       }) specialisationVariants;
+    })
+
+    # Wallpaper handling. These options always exist structurally (HM ships
+    # services.hyprpaper and a freeform systemd.user.services), so we gate
+    # the *values* with mkIf/optionals rather than shaping structure — that
+    # avoids the config-depends-on-config recursion that optionalAttrs on a
+    # config value would cause.
+    {
+      services.hyprpaper.enable = wallpapersEnabled;
+      services.hyprpaper.settings = mkIf wallpapersEnabled {
+        splash = false;
+        wallpaper = [{ monitor = ""; path = wallpaperSymlink; }];
+      };
+
+      systemd.user.services.wallpaper-init = mkIf wallpapersEnabled {
+        Unit = {
+          Description = "Pick and apply a wallpaper matching the base theme";
+          After = [ "hyprpaper.service" ];
+          PartOf = [ "graphical-session.target" ];
+        };
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${wallpaper-init}";
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
     }
-  );
+  ]);
 }
