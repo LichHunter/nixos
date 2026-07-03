@@ -30,15 +30,21 @@ let
 
   availableVariants = concatStringsSep " " (attrNames themeVariants);
 
+  # variant:doomtheme pairs consumed by the theme-switch script's
+  # best-effort Doom Emacs hook (see ./theme-switch.sh).
+  doomThemeMap = concatStringsSep " "
+    (mapAttrsToList (variant: theme: "${variant}:${theme}") cfg.doomThemes);
+
   # Userspace theme switcher: activates a pre-built Home Manager
   # specialisation generation. No sudo, no OS rebuild — just runs the
   # specialisation's activation script in the base HM generation.
   #
   # The script logic lives in ./theme-switch.sh (plain shell, no Nix
-  # escaping); we only inject the two config-derived values it needs.
+  # escaping); we only inject the config-derived values it needs.
   theme-switch = pkgs.writeShellScriptBin "theme-switch" ''
     baseVariant="${baseVariant}"
     availableVariants="${availableVariants}"
+    doomThemes="${doomThemeMap}"
     ${builtins.readFile ./theme-switch.sh}
   '';
 
@@ -66,6 +72,28 @@ in {
       });
       default = builtinThemes;
       description = "Available themes with dark and light variants";
+    };
+
+    doomThemes = mkOption {
+      type = types.attrsOf types.str;
+      default = {
+        gruvbox-dark = "doom-gruvbox";
+        gruvbox-light = "doom-one-light";
+        catppuccin-dark = "doom-one";
+        catppuccin-light = "doom-one-light";
+      };
+      description = ''
+        Mapping from theme variant name (e.g. "gruvbox-dark") to the Doom
+        Emacs theme symbol (e.g. "doom-gruvbox") that theme-switch will
+        live-load via emacsclient when switching to that variant. Variants
+        absent from this map are left unchanged in Emacs.
+
+        Only themes actually installed in Doom will load; the defaults use
+        themes bundled with doom-themes (so they work out of the box, though
+        catppuccin variants fall back to generic dark/light). For accurate
+        catppuccin colours, install the `catppuccin-theme` Emacs package and
+        map the variants to `catppuccin-mocha` / `catppuccin-latte`.
+      '';
     };
   };
 

@@ -1,18 +1,22 @@
 # shellcheck shell=bash
 # theme-switch — activate a pre-built Home Manager specialisation.
 #
-# Expects two variables to be injected by the Nix wrapper:
+# Expects these variables to be injected by the Nix wrapper:
 #   baseVariant        the variant that is the generation itself (not a
 #                      specialisation), activated via `$gen/activate`.
 #   availableVariants  space-separated list of all variant names (help text).
+#   doomThemes         optional space-separated `variant:doomtheme` pairs for
+#                      the best-effort Doom Emacs live-switch (may be empty).
 #
 # Standalone usage for testing:
 #   baseVariant=gruvbox-dark \
 #   availableVariants="gruvbox-dark gruvbox-light catppuccin-dark catppuccin-light" \
+#   doomThemes="gruvbox-dark:doom-gruvbox" \
 #   bash theme-switch.sh <variant>
 
 : "${baseVariant:?theme-switch: baseVariant not set}"
 : "${availableVariants:?theme-switch: availableVariants not set}"
+: "${doomThemes:=}"
 set -euo pipefail
 
 variant="${1:-}"
@@ -74,4 +78,26 @@ if [ ! -x "$activate" ]; then
 fi
 
 echo "Switching theme to $variant..."
+
+# Best-effort: live-switch the running Doom Emacs daemon too. No config
+# files are touched; if the daemon isn't running or emacsclient isn't
+# installed (e.g. on a server), this is silently skipped. A theme symbol
+# that isn't installed in Doom makes emacsclient return non-zero, which we
+# also treat as skip.
+doom_theme=""
+if [ -n "$doomThemes" ]; then
+  for pair in $doomThemes; do
+    case "$pair" in
+      "${variant}":*) doom_theme="${pair#*:}"; break ;;
+    esac
+  done
+fi
+if [ -n "$doom_theme" ] && command -v emacsclient >/dev/null 2>&1; then
+  if emacsclient --eval "(progn (mapc (function disable-theme) custom-enabled-themes) (load-theme (quote ${doom_theme}) t))" >/dev/null 2>&1; then
+    echo "Doom: ${doom_theme}"
+  else
+    echo "note: Doom theme switch skipped (daemon not running or '${doom_theme}' not installed)" >&2
+  fi
+fi
+
 exec "$activate"
