@@ -28,8 +28,8 @@ let
     mOnSurface = if variant == "dark" then c.base05 else c.base01;
     mSurfaceVariant = if variant == "dark" then c.base01 else c.base06;
     mOnSurfaceVariant = if variant == "dark" then c.base04 else c.base02;
-    mHover = if variant == "dark" then c.base02 else c.base06;
-    mOnHover = if variant == "dark" then c.base06 else c.base01;
+    mHover = if variant == "dark" then mkForce c.base02 else mkForce c.base06;
+    mOnHover = if variant == "dark" then mkForce c.base06 else mkForce c.base01;
     mOutline = c.base03;
     mShadow = c.base00;
     terminal = {
