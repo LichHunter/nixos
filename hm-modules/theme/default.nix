@@ -6,7 +6,8 @@ let
   cfg = config.dov.dynamic-theme;
   schemes = "${pkgs.base16-schemes}/share/themes";
 
-  # Single source of truth for builtin themes
+  # Curated defaults — covers the popular schemes without blowing up
+  # build memory. Users can add more via `dov.dynamic-theme.themes`.
   builtinThemes = {
     gruvbox = {
       dark = "${schemes}/gruvbox-dark-hard.yaml";
@@ -16,9 +17,42 @@ let
       dark = "${schemes}/catppuccin-mocha.yaml";
       light = "${schemes}/catppuccin-latte.yaml";
     };
+    nord = {
+      dark = "${schemes}/nord.yaml";
+      light = "${schemes}/nord-light.yaml";
+    };
+    solarized = {
+      dark = "${schemes}/solarized-dark.yaml";
+      light = "${schemes}/solarized-light.yaml";
+    };
+    tokyo-night = {
+      dark = "${schemes}/tokyo-night-dark.yaml";
+      light = "${schemes}/tokyo-night-light.yaml";
+    };
+    rose-pine = {
+      dark = "${schemes}/rose-pine.yaml";
+      light = "${schemes}/rose-pine-dawn.yaml";
+    };
+    one = {
+      dark = "${schemes}/onedark.yaml";
+      light = "${schemes}/one-light.yaml";
+    };
+    material = {
+      dark = "${schemes}/material-darker.yaml";
+      light = "${schemes}/material-lighter.yaml";
+    };
+    google = {
+      dark = "${schemes}/google-dark.yaml";
+      light = "${schemes}/google-light.yaml";
+    };
+    github = {
+      dark = "${schemes}/github-dark.yaml";
+      light = "${schemes}/github.yaml";
+    };
   };
 
-  # Generate all theme-variant combinations
+  # Generate all theme-variant combinations from the configured themes.
+  # Each theme produces a "-dark" and "-light" variant.
   themeVariants = concatMapAttrs (name: theme: {
     "${name}-dark" = { scheme = theme.dark; polarity = "dark"; };
     "${name}-light" = { scheme = theme.light; polarity = "light"; };
@@ -112,28 +146,42 @@ in {
         };
       });
       default = builtinThemes;
-      description = "Available themes with dark and light variants";
+      description = ''
+        Available themes with dark and light variants. Each entry
+        generates two specialisations (`<name>-dark` and
+        `<name>-light`). Add more here to extend the defaults.
+      '';
     };
 
     doomThemes = mkOption {
       type = types.attrsOf types.str;
-      default = {
-        gruvbox-dark = "doom-gruvbox";
-        gruvbox-light = "doom-one-light";
-        catppuccin-dark = "doom-one";
-        catppuccin-light = "doom-one-light";
-      };
+      # Auto-generate sane defaults from the configured themes, then
+      # overlay specific overrides for schemes that ship a dedicated
+      # doom-theme.
+      default =
+        let
+          generated = concatMapAttrs (name: _: {
+            "${name}-dark" = "doom-one";
+            "${name}-light" = "doom-one-light";
+          }) cfg.themes;
+        in generated // {
+          "gruvbox-dark" = "doom-gruvbox";
+          "solarized-dark" = "doom-solarized-dark";
+          "solarized-light" = "doom-solarized-light";
+          "tokyo-night-dark" = "doom-tokyo-night";
+          "nord-dark" = "doom-nordic";
+          "material-dark" = "doom-material";
+          "rose-pine-dark" = "doom-rose-pine";
+          "catppuccin-dark" = "doom-catppuccin-mocha";
+          "catppuccin-light" = "doom-catppuccin-latte";
+        };
       description = ''
-        Mapping from theme variant name (e.g. "gruvbox-dark") to the Doom
-        Emacs theme symbol (e.g. "doom-gruvbox") that theme-switch will
-        live-load via emacsclient when switching to that variant. Variants
-        absent from this map are left unchanged in Emacs.
-
-        Only themes actually installed in Doom will load; the defaults use
-        themes bundled with doom-themes (so they work out of the box, though
-        catppuccin variants fall back to generic dark/light). For accurate
-        catppuccin colours, install the `catppuccin-theme` Emacs package and
-        map the variants to `catppuccin-mocha` / `catppuccin-latte`.
+        Mapping from variant name (e.g. "gruvbox-dark") to the Doom
+        Emacs theme symbol. Defaults are auto-generated from the
+        configured themes (dark → doom-one, light → doom-one-light)
+        with overrides for schemes that have a dedicated doom-theme.
+        Only themes installed in Doom will load; others are silently
+        skipped.
       '';
     };
 
@@ -213,5 +261,21 @@ in {
         Install.WantedBy = [ "graphical-session.target" ];
       };
     }
+
+    # Nushell tab-completion: declares `theme-switch`'s argument signature
+    # so nushell completes variant names natively (takes priority over
+    # carapace's generic fallback). `extraConfig` is `types.lines`, so it
+    # merges cleanly with the carapace completer from hm-modules/shell/nu.
+    (mkIf config.programs.nushell.enable {
+      programs.nushell.extraConfig = ''
+        def "nu-complete theme-variants" [] {
+            "${availableVariants}" | split row " "
+        }
+
+        extern theme-switch [
+            variant: string@"nu-complete theme-variants"
+        ]
+      '';
+    })
   ]);
 }
