@@ -405,6 +405,87 @@ dov = {
 };
 #+end_src
 
+** YubiKey
+Provides PAM U2F authentication (touch YubiKey for login/sudo) and a seamless SSH agent backed by the YubiKey PIV applet.
+
+#+begin_src nix
+dov = {
+  yubikey.enable = true;
+};
+#+end_src
+
+*** PAM U2F (login & sudo)
+After enabling the module and rebuilding, enroll your YubiKey:
+
+1. Create the YubiKey config directory:
+   #+begin_src sh
+   mkdir -p ~/.config/Yubico
+   #+end_src
+
+2. Generate the U2F key mapping (touch YubiKey when prompted):
+   #+begin_src bash
+   nix-shell -p pam_u2f --run 'pamu2fcfg -u fujin' > ~/.config/Yubico/u2f_keys
+   #+end_src
+
+   *Nushell users:* use ~out>~ instead of ~>~:
+   #+begin_src
+   nix-shell -p pam_u2f --run 'pamu2fcfg -u fujin' out> ~/.config/Yubico/u2f_keys
+   #+end_src
+
+3. Add a backup YubiKey (optional):
+   #+begin_src bash
+   nix-shell -p pam_u2f --run 'pamu2fcfg -u fujin -n' >> ~/.config/Yubico/u2f_keys
+   #+end_src
+
+4. Rebuild and switch:
+   #+begin_src sh
+   sudo nixos-rebuild switch --flake .#fujin
+   #+end_src
+
+5. Test:
+   #+begin_src sh
+   sudo true  # should prompt to touch YubiKey
+   #+end_src
+
+The default mode is =sufficient= (touch key *or* type password). If the key is absent or not enrolled, the normal password prompt follows — you cannot lock yourself out.
+
+*** SSH with FIDO2-backed keys
+The module enables the standard OpenSSH agent (not GPG agent's SSH emulation, which doesn't reliably support =-sk= keys). The YubiKey uses FIDO2 — the same interface that PAM U2F uses — so no PIV/pcscd setup is needed for SSH.
+
+1. Generate a FIDO2-backed SSH key (one-time, touch YubiKey when prompted):
+   #+begin_src sh
+   ssh-keygen -t ed25519-sk -C "yubikey@fujin"
+   #+end_src
+
+   *Resident key* (recoverable on a new machine without the stub file):
+   #+begin_src sh
+   ssh-keygen -t ed25519-sk -O resident -C "yubikey@fujin"
+   #+end_src
+
+2. Load the key into the agent (once per login session, enter passphrase):
+   #+begin_src sh
+   ssh-add ~/.ssh/id_ed25519_sk
+   #+end_src
+
+   *After a rebuild*, log out and back in so the shell picks up the new =SSH_AUTH_SOCK=. In an existing session:
+   #+begin_src sh
+   export SSH_AUTH_SOCK=/run/user/$(id -u)/ssh-agent
+   #+end_src
+
+3. Copy the public key to remote hosts:
+   #+begin_src sh
+   ssh-copy-id -i ~/.ssh/id_ed25519_sk.pub susano
+   #+end_src
+
+4. Test:
+   #+begin_src sh
+   ssh susano  # touch YubiKey, no password
+   #+end_src
+
+Each SSH authentication requires a physical YubiKey touch. The passphrase is only asked when loading the key into the agent (step 2), not per-connection.
+
+*Note:* The key stub (~/.ssh/id_ed25519_sk) is tied to this specific generation — regenerating produces a different key. Back it up or use =-O resident=.
+
 * Notes and Configuration Details
 ** Remote Build Configuration
 To leverage remote builds (e.g., building fujin configurations on izanagi), you need to set up SSH keys for the root user:

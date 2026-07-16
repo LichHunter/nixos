@@ -121,6 +121,8 @@
     display-manager.ly.enable = true;
 
     gaming.enable = true;
+
+    yubikey.enable = true;
   };
 
   ###
