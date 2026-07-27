@@ -214,6 +214,19 @@
     };
 
     packages.x86_64-linux = {
+      nixos-lxc = (nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./machines/builder
+          ({ modulesPath, ... }: {
+            imports = [ (modulesPath + "/virtualisation/proxmox-lxc.nix") ];
+          })
+        ];
+        specialArgs = {
+          inherit inputs;
+        };
+      }).config.system.build.image;
+
       izanami-proxmox = nixos-generators.nixosGenerate {
         system = "x86_64-linux";
         modules = [

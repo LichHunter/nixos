@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ ... }:
 
 {
   imports = [
@@ -16,5 +16,6 @@
     ./jenkins
     ./gaming
     ./yubikey
+    ./scripts
   ];
 }

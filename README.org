@@ -61,6 +61,7 @@ This guide documents methods for installing NixOS on a Proxmox virtual machine a
   - [[#rebuildsh---enhanced-nixos-rebuild-wrapper][rebuild.sh - Enhanced NixOS Rebuild Wrapper]]
   - [[#backupsh---automated-backup-script][backup.sh - Automated Backup Script]]
   - [[#hash-utilsh---file-hash-verification][hash-util.sh - File Hash Verification]]
+  - [[#pve-buildsh---disposable-lxc-builder-on-proxmox-ve][pve-build.sh - Disposable LXC Builder on Proxmox VE]]
 - [[#optional-nixos-modules][Optional NixOS Modules]]
   - [[#reverse-proxies][Reverse Proxies]]
   - [[#file-servers][File Servers]]
@@ -334,6 +335,155 @@ Verifies file integrity using SHA256 checksums.
 # Check configuration file integrity
 ./bin/hash-util.sh --path configuration.nix --hash $(sha256sum configuration.nix | cut -d' ' -f1)
 #+end_src
+
+** pve-build.sh - Disposable LXC Builder on Proxmox VE
+Builds a NixOS configuration on a throwaway LXC container running on the Proxmox VE node, then activates the result on the requester (= the machine invoking the script, by default). Offloads the heavy compilation work from the requester to a disposable builder; the closure is shipped back over =nix copy= and activated locally.
+
+The disposable is cloned from a NixOS LXC ostemplate (=nixos-lxc= flake output, =proxmox-lxc= format). The template is built locally and uploaded to PVE on first use, then reused.
+
+*** Prerequisites
+- An SSH alias =pve= in =~/.ssh/config= pointing at the PVE node (the script defers all connection details — HostName, User, Port, IdentityFile — to SSH config). Override with =PVE_HOST= or =--pve-host= if your alias differs.
+- The operator's pubkey must be in the =adminKeys= list in =machines/builder/default.nix=. The disposable's =builder= user trusts whatever keys are listed there.
+- The caller must resolve disposable hostnames (=nixos-builder-<VMID>=) — typically via dnsmasq or split-DNS that reads from PVE. The script never uses IPs for SSH.
+- =jq= on the caller (to parse =pvesh= JSON output).
+
+*** Flow
+1. Ensure a NixOS LXC ostemplate exists on PVE; build =.#nixos-lxc= locally and =scp= it if missing.
+2. Clone a fresh container under a free VMID (scanning downward from 9999), start it, wait for SSH on its hostname.
+3. Build phase (runs as the calling user, no =sudo=):
+   #+begin_example
+   nixos-rebuild build --flake .#<requester> --build-host root@<ct-ip>
+   #+end_example
+   builds the closure on the disposable and copies it back to the local Nix store.
+4. Activate phase (only for =test= / =switch= / =boot=; runs locally with =sudo=, no =--build-host=):
+   #+begin_example
+   sudo nixos-rebuild <cmd> --flake .#<requester>
+   #+end_example
+   the closure is already local, so this only activates.
+5. Destroy the disposable (=pct destroy --purge --force=).
+
+The build/activate split avoids needing the requester's root user to SSH to the disposable — only the calling user does.
+
+*** Composite vs. step commands
+Each stage can be invoked on its own, or chained via the composite commands:
+
+| Composite | Stages chained                                                  | Disposable on success |
+|-----------+-----------------------------------------------------------------+-----------------------|
+| =build=   | deploy-image + start-builder + build-on                         | left running          |
+| =test=    | deploy-image + start-builder + build-on + activate(test)        | left running          |
+| =switch=  | deploy-image + start-builder + build-on + activate(switch) + destroy-builder | destroyed             |
+| =boot=    | deploy-image + start-builder + build-on + activate(boot)   + destroy-builder | destroyed             |
+
+| Step command              | Stage | Effect                                                                |
+|---------------------------+-------+-----------------------------------------------------------------------|
+| =check-image=             |     1 | Read-only: exit 0 if a NixOS LXC ostemplate is on PVE, 1 if not.      |
+| =deploy-image=            |     1 | Idempotent: build =.#nixos-lxc= locally + scp to PVE if missing.      |
+| =update-image=            |     1 | Force: rebuild =.#nixos-lxc= and replace the ostemplate on PVE.       |
+| =start-builder=           |     2 | deploy-image + clone a fresh CT + start.                              |
+| =build-on [VMID]=         |     3 | Build closure on an existing disposable.                             |
+| =activate <test\|switch\|boot>= |     4 | Activate LOCALLY (closure must already be in the local store).       |
+| =destroy-builder [VMID]=  |     5 | =pct destroy --purge --force=.                                        |
+| =info [VMID]=             |   -   | List disposables, or show detail for one.                            |
+
+*** Stateless design
+The script writes no state files. Each step discovers prior steps' artifacts dynamically from PVE:
+
+- Disposables are identified by hostname pattern =nixos-builder-<VMID>= (override via =CT_HOSTNAME_PREFIX=). When a step needs a target VMID and none is passed explicitly, it queries =pvesh get /cluster/resources= for LXC containers matching the prefix.
+  - Exactly one match :: used automatically.
+  - Zero matches :: the step errors out and points at =create=.
+  - Multiple matches :: the step errors out, lists the matches, and asks for an explicit VMID.
+- VMID allocation starts at =9999= and scans downward (configurable via =--vmid-start= / =--vmid-floor=) so disposables sit clearly above regular VM IDs.
+- The built closure lives in the caller's local Nix store; =nixos-rebuild= finds it naturally during =activate=, so no IPC between =build-on= and =activate= is needed.
+
+*** Hostname-based SSH
+All SSH to disposables targets their hostname (=nixos-builder-<VMID>=), never their IP. The caller's resolver must be able to look up PVE container hostnames — typically via dnsmasq or split-DNS that reads from PVE. The script never resolves IPs for SSH; =get_ct_ip= is used only for =info= display and diagnostic logging.
+
+This makes the script safe to re-run, interrupt, or split across shell sessions — there is no =latest-vmid= file to drift out of sync with reality.
+
+*** Basic Usage
+#+begin_src sh
+# Full happy path — build + activate susano permanently, auto-destroy CT.
+pve-build switch --machine susano
+
+# Step-by-step (each step discovers the prior step's artifacts from PVE):
+pve-build deploy-image                 # build + upload the LXC ostemplate (no-op if present)
+pve-build start-builder                # clones a fresh disposable CT
+pve-build build-on                     # discovers the CT on PVE, builds on it
+pve-build activate switch              # activates locally (no SSH)
+pve-build destroy-builder              # discovers the CT on PVE, destroys it
+
+# Rebuild the LXC image after editing machines/builder/default.nix.
+pve-build update-image
+
+# Read-only check (exit 0 if image is already on PVE, 1 otherwise).
+pve-build check-image && echo ready || echo missing
+
+# Operate on a specific CT (skips discovery — needed when multiple exist).
+pve-build build-on 305
+#+end_src
+
+*** Advanced Examples
+#+begin_src sh
+# Build + activate temporarily without persisting to the bootloader.
+pve-build test --machine fujin
+
+# Use a non-default PVE node and a higher starting VMID.
+pve-build switch --pve-host root@10.0.0.5 --vmid-start 9999
+
+# Keep the disposable even after a successful switch (for inspection).
+pve-build switch --keep
+
+# List every disposable currently on PVE.
+pve-build info
+
+# Inspect a specific disposable in detail.
+pve-build info 307
+
+# Destroy a specific disposable by VMID.
+pve-build destroy-builder 307
+#+end_src
+
+*** Command Reference
+**** Composite commands
+- =build= - deploy-image + start-builder + build-on.
+- =test= - build + activate temporarily (reverts on reboot).
+- =switch= - build + activate permanently. Disposable destroyed on success.
+- =boot= - build + set as boot default. Disposable destroyed on success.
+
+**** Step commands
+- =check-image= - Read-only: exit 0 if ostemplate is on PVE, 1 if missing.
+- =deploy-image= - Idempotent: build =.#nixos-lxc= locally + scp to PVE if missing.
+- =update-image= - Force rebuild + replace the ostemplate on PVE.
+- =start-builder= - deploy-image + clone a fresh CT + start.
+- =build-on [VMID]= - Build closure on an existing disposable (default: discovered).
+- =activate <test|switch|boot>= - Activate LOCALLY (closure must already be built).
+- =destroy-builder [VMID]= - =pct destroy --purge --force= (default: discovered).
+- =info [VMID]= - List disposables, or show detail for one.
+
+**** Aliases
+The old command names still work as aliases:
+- =ensure-template= → =deploy-image=
+- =create= → =start-builder=
+
+**** Options
+- =--machine NAME= - Requester machine name (default: current hostname).
+- =--pve-host HOST= - PVE SSH alias or target (default: =pve=).
+- =--pve-storage NAME= - Ostemplate storage (default: =local=).
+- =--rootfs-storage NAME= - Rootfs storage (default: =local-lvm=).
+- =--bridge NAME= - Network bridge (default: =vmbr0=).
+- =--vmid-start N= - Highest VMID to consider (default: =9999=); scanned downward.
+- =--vmid-floor N= - Lowest VMID to consider (default: =100=).
+- =--rootfs-gib N= - Rootfs size in GiB (default: =20=).
+- =--keep= - Keep the disposable even on successful =switch= / =boot=.
+- =--show-trace= , =--verbose= - Passed through to =nixos-rebuild=.
+
+**** Environment
+= PVE_HOST= , = PVE_STORAGE= , = PVE_ROOTFS_STORAGE= , = PVE_BRIDGE= , = VMID_START= , = VMID_FLOOR= , = BUILD_SSH_USER= , = CT_BOOT_TIMEOUT= , = CT_ROOTFS_GIB= .
+
+*** Notes
+- Disposables are matched by hostname prefix (=nixos-builder-= by default). If you want a parallel run with multiple builders, pass explicit VMIDs to =build-on= / =destroy-builder= / =info=.
+- =destroy-builder= calls =pct destroy <vmid> --purge --force=, so it stops and removes a running container in one step.
+- To rebuild the LXC template after editing =machines/builder/default.nix=, remove the old tarball from =root@<pve>:/var/lib/vz/template/cache/= — the script always picks the alphabetically last =nixos-lxc-*.tar.xz= it finds.
 
 * Optional NixOS Modules
 ** Reverse Proxies
