@@ -1,5 +1,5 @@
 {
-  description = "Susano NixOS Homelab";
+  description = "Alex's NixOS";
 
   inputs = {
     # Nixpkgs
