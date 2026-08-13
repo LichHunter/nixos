@@ -107,7 +107,7 @@ in
 
         widget = {
           clock = {
-            format = "{:%H:%M}";
+            format = "{:%a %d %b, %H:%M}";
             tooltip_format = "{:%A, %B %d, %Y}";
           };
 
@@ -121,7 +121,7 @@ in
 
           ram = {
             type = "sysmon";
-            stat = "memory_usage";
+            stat = "ram_pct";
           };
 
           # Microphone — named volume widget with input device

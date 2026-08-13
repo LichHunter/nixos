@@ -4,5 +4,7 @@
   imports = [
     ./nix-vscode-server
     ./emacs
+    ./qoder
+    ./android
   ];
 }

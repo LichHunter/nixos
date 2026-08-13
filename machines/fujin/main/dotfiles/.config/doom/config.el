@@ -42,6 +42,12 @@
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
 
+;; Use bash, not nu, for non-interactive subprocesses (compile, shell-command,
+;; lsp-mode installers). Nu doesn't unescape Emacs's POSIX-style backslash
+;; escaping, which corrupts args like -Djdt.download.url=...?...=... .
+;; vterm keeps using nu (see vterm-shell below).
+(setq shell-file-name "/run/current-system/sw/bin/bash")
+
 
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
 ;; `after!' block, otherwise Doom's defaults may override your settings. E.g.
