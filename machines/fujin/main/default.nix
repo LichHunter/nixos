@@ -113,7 +113,7 @@
   dov = {
     development.emacs.enable = true;
     development.qoder = {
-        enable = true;
+        enable = false;
         version = "1.19.2";
         hash = "sha256-/P3UStsRHKKWC1xET9SL23E0CUPxQ5DkmWFco+dH37A="; # nix store prefetch-file --json https://download.qoder.com/release/latest/qoder_amd64.deb | jq -r .hash
     };
