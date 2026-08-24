@@ -144,7 +144,6 @@
     # option exists for fujin's home configuration.
     sharedModules = [
       inputs.stylix.homeModules.stylix
-      inputs.noctalia.homeModules.default
     ];
 
     users."${username}" = { imports = [ ./home.nix ] ++ extraHomeModules; };
