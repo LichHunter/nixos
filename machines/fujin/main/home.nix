@@ -152,6 +152,7 @@
     wl-clipboard
     #cloudflared
     kdePackages.okular #pdf tool
+    kdePackages.gwenview # image viewer
     #nextcloud-client
 
     #music

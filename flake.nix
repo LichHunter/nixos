@@ -70,7 +70,7 @@
 
     thefuck.url = "github:LichHunter/thefuck";
 
-    backlog.url = "github:LichHunter/backlog";
+    backlog.url = "git+https://gitea.susano-homelab.duckdns.org/fujin/backlog.git";
 
     noctalia = {
       url = "github:noctalia-dev/noctalia";
