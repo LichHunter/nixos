@@ -66,9 +66,11 @@
   };
 
   networking = {
+    # OPNsense (192.168.100.1) runs Unbound with the homelab.lan overrides;
+    # the old 192.168.1.x Pi-hole/router are gone and returned NXDOMAIN for
+    # the local zone. 1.1.1.1 stays as a fallback if the firewall is down.
     nameservers = [
-      "192.168.1.2" # PyHole
-      "192.168.1.1" # Router
+      "192.168.100.1" # OPNsense Unbound
       "1.1.1.1"
     ];
     dhcpcd.extraConfig = ''
