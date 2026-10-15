@@ -8,8 +8,8 @@
 #
 #   Stage    Step command               Effect
 #   ------   -------------------------  --------------------------------------
-#   1        check-image                Read-only: is a NixOS LXC ostemplate on PVE?
-#            deploy-image               Idempotent: build+upload if missing, no-op if present.
+#   1        check-image                Read-only: is the ostemplate matching the current flake on PVE?
+#            deploy-image               Idempotent: build+upload if missing/stale, no-op if current.
 #            update-image               Force: rebuild locally + replace on PVE.
 #   2        start-builder              deploy-image + clone a fresh CT under a free
 #                                       VMID + start it + wait for DHCP.
@@ -90,6 +90,7 @@ PVE_BRIDGE="${PVE_BRIDGE:-vmbr0}"                        # network bridge
 VMID_START="${VMID_START:-9999}"                          # scan downward from here for a free VMID
 VMID_FLOOR="${VMID_FLOOR:-100}"                          # lowest VMID to consider (PVE minimum)
 TEMPLATE_OUTPUT="${TEMPLATE_OUTPUT:-nixos-lxc}"          # flake output to build
+TEMPLATE_TOPLEVEL_OUTPUT="${TEMPLATE_TOPLEVEL_OUTPUT:-nixos-lxc-toplevel}" # flake output a disposable must be running
 CT_HOSTNAME_PREFIX="${CT_HOSTNAME_PREFIX:-nixos-builder}" # disposables' hostname prefix
 BUILD_SSH_USER="${BUILD_SSH_USER:-builder}"                # user nixos-rebuild SSHes as on the CT
 CT_BOOT_TIMEOUT="${CT_BOOT_TIMEOUT:-120}"                # seconds to wait for DHCP lease
@@ -244,9 +245,9 @@ Composite commands (chain all stages):
                              + destroy-builder. Disposable destroyed on success.
 
 Step commands (run one stage — VMID auto-discovered from PVE if omitted):
-  check-image                Read-only: exit 0 if a NixOS LXC ostemplate is on PVE, 1 if not.
-  deploy-image               Idempotent: build+upload if missing, no-op if present.
-  update-image               Force: rebuild .$TEMPLATE_OUTPUT locally + replace on PVE.
+  check-image                Read-only: exit 0 if the ostemplate matching the current flake is on PVE.
+  deploy-image               Idempotent: build+upload if missing/stale, no-op if current.
+  update-image               Force: rebuild .$TEMPLATE_OUTPUT + upload. Old templates are kept.
   start-builder              deploy-image + clone a fresh CT + start.
   build-on [VMID]            Build closure on an existing disposable.
   activate <test|switch|boot>
@@ -279,7 +280,8 @@ Options:
 Environment:
   PVE_HOST, PVE_STORAGE, PVE_ROOTFS_STORAGE, PVE_BRIDGE,
   VMID_START, VMID_FLOOR, BUILD_SSH_USER,
-  CT_BOOT_TIMEOUT, CT_ROOTFS_GIB, TEMPLATE_OUTPUT, CT_HOSTNAME_PREFIX
+  CT_BOOT_TIMEOUT, CT_ROOTFS_GIB, TEMPLATE_OUTPUT, TEMPLATE_TOPLEVEL_OUTPUT,
+  CT_HOSTNAME_PREFIX
 
 Examples:
   # Full happy path — build + activate susano permanently, auto-destroy CT.
@@ -481,17 +483,33 @@ resolve_vmid() {
 ## ---------------------------------------------------------------------------
 # Stage 1: image management (check / deploy / update).
 # All three operate on the NixOS LXC ostemplate stored in PVE's
-# /var/lib/vz/template/cache/. The "latest" template is whichever
-# nixos-lxc-*.tar.xz sorts last alphabetically (matches the helpers below).
+# /var/lib/vz/template/cache/.
+#
+# Template identity: .$TEMPLATE_OUTPUT's store path is evaluated (no build);
+# its basename embeds the full derivation hash — nixpkgs pin AND NixOS
+# config — and becomes the uploaded filename. Matching against PVE is exact:
+# a template matches the current flake iff its name equals the evaluated
+# one. This catches both "missing" and "stale" images. (The previous
+# "alphabetically last nixos*lxc*.tar.xz" pick was wrong: unstable version
+# strings like 26.05pre-git sort above dated stable ones like 25.05.2026…,
+# so a stale image could win over the current one.)
 # ---------------------------------------------------------------------------
 
-# Echo the storage-relative path of the newest nixos-lxc template on PVE, or
-# empty if none. Read-only.
-find_template_on_pve() {
-  debug "find_template_on_pve: pveam list $PVE_STORAGE"
-  pve pveam list "$PVE_STORAGE" 2>/dev/null \
-    | awk '/nixos.*lxc.*\.tar\.xz/ {print $1}' \
-    | sort | tail -n1 || true
+# Evaluate the image derivation's store path WITHOUT building it, and derive
+# the canonical template filename from it. Sets TEMPLATE_FILENAME and
+# OSTEMPLATE. Because the store-path hash covers the flake lock and the
+# whole NixOS config, any edit to machines/builder/ or nixpkgs pin bump
+# changes the filename — "same name, older build" becomes impossible.
+resolve_template_identity() {
+  step "Evaluating .$TEMPLATE_OUTPUT image identity (nix eval, no build) ..."
+  local out_path
+  out_path=$(cd "$FLAKE_ROOT" && nix eval --raw ".#$TEMPLATE_OUTPUT.outPath") \
+    || die "Failed to eval .$TEMPLATE_OUTPUT.outPath — is the flake evaluable?"
+  TEMPLATE_FILENAME="$(basename "$out_path").tar.xz"
+  OSTEMPLATE="$PVE_STORAGE:vztmpl/$TEMPLATE_FILENAME"
+  debug "image outPath:   $out_path"
+  debug "template on PVE: $OSTEMPLATE"
+  ok "Current flake image: $TEMPLATE_FILENAME"
 }
 
 # Build .$TEMPLATE_OUTPUT locally and scp the tarball to PVE's template cache.
@@ -505,80 +523,60 @@ build_and_upload_image() {
     || die "nix build .$TEMPLATE_OUTPUT produced no output path."
   log "  nix output: $result_dir"
 
-  # nixos-generators proxmox-lxc format lays the file under result/tarball/*.tar.xz
+  # Identity first, so the upload target is the canonical hash-embedded
+  # filename even when called without a prior check_image (update-image).
+  resolve_template_identity
+
+  # nixos-generators / proxmox-lxc image lays the file under result/tarball/*.tar.xz
   local tarball
   tarball=$(find "$result_dir/tarball" -maxdepth 1 -type f -name '*.tar.xz' -print -quit | head -n1)
   [[ -n "$tarball" ]] \
-    || die "No .tar.xz found under $result_dir/tarball/. Did nixos-generators output layout change?"
-  local tname; tname=$(basename "$tarball")
+    || die "No .tar.xz found under $result_dir/tarball/. Did the image output layout change?"
   debug "tarball path: $tarball"
-  debug "tarball name: $tname"
-  ok "Built image: $tname"
+  ok "Built image: $(basename "$tarball")"
 
   step "Uploading to $PVE_HOST:/var/lib/vz/template/cache/ ..."
   local size_human
   size_human=$(du -h "$tarball" | cut -f1)
-  log "  scp $tarball ($size_human) -> $PVE_HOST:/var/lib/vz/template/cache/$tname"
-  pve_scp "$tarball" "$PVE_HOST:/var/lib/vz/template/cache/$tname"
-
-  OSTEMPLATE="$PVE_STORAGE:vztmpl/$tname"
+  log "  scp $tarball ($size_human) -> $PVE_HOST:/var/lib/vz/template/cache/$TEMPLATE_FILENAME"
+  pve_scp "$tarball" "$PVE_HOST:/var/lib/vz/template/cache/$TEMPLATE_FILENAME"
 }
 
-# Remove old nixos-lxc templates from PVE, keeping $1. Must be called after
-# the new image is uploaded so a build/upload failure leaves the previous
-# template intact.
-purge_old_templates_on_pve() {
-  local keep="${1:-}"
-  step "Purging old nixos-lxc templates from $PVE_HOST (keeping ${keep:-none}) ..."
-  local all
-  all=$(pve pveam list "$PVE_STORAGE" 2>/dev/null \
-        | awk '/nixos.*lxc.*\.tar\.xz/ {print $1}' || true)
-  local removed=0
-  while IFS= read -r t; do
-    [[ -n "$t" ]] || continue
-    if [[ -n "$keep" && "$t" == "$keep" ]]; then
-      debug "keeping: $t"
-      continue
-    fi
-    local filename="${t##*/}"
-    log "  removing: $t"
-    pve rm -f "/var/lib/vz/template/cache/$filename" 2>/dev/null || true
-    removed=$((removed + 1))
-  done <<<"$all"
-  ok "Purged $removed old template(s)"
-}
-
-# Read-only check. Sets OSTEMPLATE and returns 0 if a template exists;
-# clears OSTEMPLATE and returns 1 if missing.
+# Read-only check. Sets OSTEMPLATE and returns 0 if the template matching
+# the CURRENT flake build is on PVE; clears OSTEMPLATE and returns 1 if it
+# is missing or stale (a differently-named nixos-lxc template may exist).
 check_image() {
-  step "Checking for nixos-lxc ostemplate on $PVE_HOST (storage: $PVE_STORAGE) ..."
+  resolve_template_identity
+  step "Checking for $OSTEMPLATE on $PVE_HOST (storage: $PVE_STORAGE) ..."
   local existing
-  existing=$(find_template_on_pve)
+  existing=$(pve pveam list "$PVE_STORAGE" 2>/dev/null | awk -v t="$OSTEMPLATE" '$1 == t {print $1}')
   if [[ -n "$existing" ]]; then
-    OSTEMPLATE="$existing"
-    ok "Image present: $OSTEMPLATE"
+    ok "Image present (matches current flake build): $OSTEMPLATE"
     return 0
   fi
   OSTEMPLATE=""
-  warn "No nixos-lxc ostemplate found."
+  warn "No template matching the current flake build on $PVE_HOST."
   return 1
 }
 
-# Idempotent deploy: build + upload only if no template exists.
+# Idempotent deploy: ensure PVE holds the template matching the CURRENT
+# flake build. No-op when it matches; build + upload otherwise. Historical
+# templates are deliberately left in place — other tooling (e.g. the
+# terraform handler) may pin containers to them.
 deploy_image() {
   if check_image; then
-    log "Nothing to do — image already on PVE."
+    log "Nothing to do — image on PVE matches current flake build."
     return
   fi
   build_and_upload_image
   ok "Image deployed: $OSTEMPLATE"
 }
 
-# Force update: build + upload first, then purge old. If the build or upload
-# fails, the previous template remains on PVE.
+# Force update: rebuild + upload even if the current template is present.
+# Old templates are never deleted (terraform may pin them); prune manually
+# with `pveam remove` if really desired.
 update_image() {
   build_and_upload_image
-  purge_old_templates_on_pve "$OSTEMPLATE"
   ok "Image updated: $OSTEMPLATE"
 }
 
@@ -640,9 +638,25 @@ create_and_start_ct() {
 # Echo the current IPv4 of a running container's eth0, or empty if unavailable.
 get_ct_ip() {
   local vmid="$1"
-  pve pct exec "$vmid" -- ip -j -4 addr show eth0 2>/dev/null \
+  # NixOS containers have no standard /bin|/sbin — lxc-attach needs the
+  # full path or exec fails with "No such file or directory".
+  pve pct exec "$vmid" -- /run/current-system/sw/bin/ip -j -4 addr show eth0 2>/dev/null \
     | jq -r '.[0].addr_info[]? | select(.scope=="global") | .local' 2>/dev/null \
     | head -n1 || true
+}
+
+# Echo the NixOS toplevel a running disposable actually booted, or empty.
+# pct config drops the ostemplate field after creation, so the container's
+# own /run/current-system is the only reliable record of what it runs.
+ct_toplevel() {
+  local vmid="$1"
+  pve pct exec "$vmid" -- /run/current-system/sw/bin/readlink /run/current-system 2>/dev/null || true
+}
+
+# Echo the toplevel the current flake's builder image boots, or empty on
+# eval failure (callers treat empty as "cannot tell, skip the check").
+expected_toplevel() {
+  (cd "$FLAKE_ROOT" && nix eval --raw ".#$TEMPLATE_TOPLEVEL_OUTPUT.outPath" 2>/dev/null) || true
 }
 
 # Wait for a disposable to become SSH-reachable via its hostname. Echos the
@@ -832,6 +846,21 @@ cmd_composite() {
       step "Container $vmid is stopped — starting ..."
       pve pct start "$vmid"
     fi
+
+    local running_top want_top
+    running_top=$(ct_toplevel "$vmid")
+    want_top=$(expected_toplevel)
+    if [[ -n "$running_top" && -n "$want_top" && "$running_top" != "$want_top" ]]; then
+      warn "Disposable $vmid runs a stale image:"
+      warn "  running: $running_top"
+      warn "  current: $want_top"
+      step "Destroying $vmid and recreating from current image ..."
+      pve pct destroy "$vmid" --purge --force
+      vmid=$(find_free_vmid)
+      hostname="$CT_HOSTNAME_PREFIX-$vmid"
+      log "Created fresh disposable: $hostname"
+      create_and_start_ct "$vmid"
+    fi
   fi
 
   hostname=$(wait_for_ready "$vmid")
@@ -867,6 +896,7 @@ cmd_composite() {
 # ---------------------------------------------------------------------------
 cmd_check_image() {
   require ssh "drive PVE"
+  require nix "evaluate the image identity"
   require_pve
   phase "check-image — read-only probe of ostemplate on PVE"
   if check_image; then
@@ -968,6 +998,16 @@ cmd_build_on() {
   if [[ "$status" != "running" ]]; then
     fail "Container $vmid is not running (status: ${status:-(unknown)})."
     die "Start it on PVE first ('pct start $vmid') or pick another VMID."
+  fi
+
+  # Guard: a disposable cloned from a stale template boots without
+  # sshd/networkd config and hangs the build — refuse instead of hanging.
+  local running_top want_top
+  running_top=$(ct_toplevel "$vmid")
+  want_top=$(expected_toplevel)
+  if [[ -n "$running_top" && -n "$want_top" && "$running_top" != "$want_top" ]]; then
+    fail "Disposable $vmid runs a stale image: $running_top"
+    die "Current flake boots: $want_top — recreate with: $0 destroy-builder $vmid && $0 start-builder"
   fi
 
   probe_ssh "$hostname" || { print_debug_info "$vmid" "$hostname"; die "Aborting build-on."; }

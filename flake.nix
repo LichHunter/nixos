@@ -213,19 +213,35 @@
         "fujin";
     };
 
-    packages.x86_64-linux = {
-      nixos-lxc = (nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [
-          ./machines/builder
-          ({ modulesPath, ... }: {
-            imports = [ (modulesPath + "/virtualisation/proxmox-lxc.nix") ];
-          })
-        ];
-        specialArgs = {
-          inherit inputs;
+    packages.x86_64-linux =
+      let
+        builderSystem = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            ./machines/builder
+            ({ modulesPath, ... }: {
+              imports = [ (modulesPath + "/virtualisation/proxmox-lxc.nix") ];
+            })
+          ];
+          specialArgs = {
+            inherit inputs;
+          };
         };
-      }).config.system.build.image;
+      in {
+        # pve-build keys template identity on this output's outPath: the
+        # store-path hash (covers nixpkgs pin + builder config) becomes the
+        # template filename on PVE. overrideAttrs only names the derivation
+        # so the filename reads <hash>-nixos-lxc-builder.tar.xz instead of
+        # <hash>-tarball.tar.xz.
+        nixos-lxc = builderSystem.config.system.build.image.overrideAttrs (_: {
+          name = "nixos-lxc-builder";
+        });
+
+        # Toplevel the builder image boots. pve-build compares it against
+        # /run/current-system inside a running disposable to detect clones
+        # of stale templates (pct config drops the ostemplate field after
+        # creation, so it cannot be used for this).
+        nixos-lxc-toplevel = builderSystem.config.system.build.toplevel;
 
       izanami-proxmox = nixos-generators.nixosGenerate {
         system = "x86_64-linux";
