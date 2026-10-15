@@ -41,7 +41,11 @@
     emacs-overlay.url = "github:nix-community/emacs-overlay/master";
 
     stylix = {
-      url = "github:nix-community/stylix";
+      # TODO: revert to github:nix-community/stylix once
+      # https://github.com/nix-community/stylix/pull/2501 is merged;
+      # stylix master still sets `programs.rofi.font`, which
+      # home-manager renamed to `programs.rofi.settings.font`.
+      url = "github:Azd325/stylix/rofi-settings-font";
       inputs.nixpkgs.follows = "unstable";
     };
 

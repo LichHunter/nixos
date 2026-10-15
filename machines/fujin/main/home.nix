@@ -159,7 +159,7 @@
     #mpd
     #mpv
     #mpc-cli
-  ] ++ [ inputs.thefuck.packages.${pkgs.system}.default ];
+  ] ++ [ inputs.thefuck.packages.${pkgs.stdenv.hostPlatform.system}.default ];
 
   # Stylix theming is driven by `dov.dynamic-theme` (hm-modules/theme),
   # which sets `enable`, `base16Scheme` and `polarity` + specialisations.

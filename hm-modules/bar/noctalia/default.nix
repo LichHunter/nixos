@@ -70,7 +70,7 @@ in
   config = mkIf cfg.enable {
     programs.noctalia = {
       enable = true;
-      package = inputs.noctalia.packages.${pkgs.system}.default;
+      package = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
       systemd.enable = true;
 
       customPalettes.stylix = {

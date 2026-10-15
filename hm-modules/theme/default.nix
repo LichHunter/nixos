@@ -215,6 +215,7 @@ in {
       stylix = {
         enable = true;
         autoEnable = true;
+        overlays.enable = false;
         # Base scheme/polarity; overridable per specialisation below.
         base16Scheme = mkDefault themeVariants.${baseVariant}.scheme;
         polarity = mkDefault themeVariants.${baseVariant}.polarity;
